@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, SkipBack, SkipForward, Repeat, X, Music, Volume2, VolumeX, Brain } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Repeat, X, Music, Volume2, VolumeX, Brain, Loader2 } from 'lucide-react';
 import { MOCK_RECITERS } from './MockData';
 
 interface AudioPlayerProps {
@@ -19,6 +19,7 @@ interface AudioPlayerProps {
 
 export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose }) => {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isAudioLoading, setIsAudioLoading] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
@@ -38,6 +39,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
   const [showMemSettings, setShowMemSettings] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const nextAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const reciterFolders: Record<string, string> = {
     'reciter-minshawi': 'Minshawy_Murattal_128kbps',
@@ -60,12 +62,16 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
 
   const pad3 = (num: number) => String(num).padStart(3, '0');
 
+  const buildAyahUrl = (surahNum: number, ayahNum: number, folder: string) => {
+    return `https://everyayah.com/data/${folder}/${pad3(surahNum)}${pad3(ayahNum)}.mp3`;
+  };
+
   const getAudioUrl = () => {
     if (currentTrack?.audioUrl) return currentTrack.audioUrl;
     const surahNum = currentTrack?.surahId || 1;
     const ayahNum = currentAyahNumber;
     const folder = selectedReciterKey;
-    return `https://everyayah.com/data/${folder}/${pad3(surahNum)}${pad3(ayahNum)}.mp3`;
+    return buildAyahUrl(surahNum, ayahNum, folder);
   };
 
   const audioSrc = currentTrack ? getAudioUrl() : '';
@@ -78,16 +84,40 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
     }
   }, [currentTrack]);
 
+  // Audio loading & playback effect
   useEffect(() => {
     if (currentTrack && audioRef.current) {
+      setIsAudioLoading(true);
       audioRef.current.src = audioSrc;
-      audioRef.current.load();
-      audioRef.current.play().then(() => setIsPlaying(true)).catch((err) => {
+      audioRef.current.playbackRate = playbackSpeed;
+      audioRef.current.play().then(() => {
+        setIsPlaying(true);
+        setIsAudioLoading(false);
+      }).catch((err) => {
         console.warn('Audio play error:', err);
         setIsPlaying(false);
+        setIsAudioLoading(false);
       });
     }
   }, [currentTrack, selectedReciterKey, currentAyahNumber]);
+
+  // Preload NEXT Ayah Audio in background for gapless playback
+  useEffect(() => {
+    if (!currentTrack) return;
+    const surahNum = currentTrack.surahId || 1;
+    const nextAyah = currentAyahNumber + 1;
+    const total = currentTrack.totalVerses || 286;
+
+    if (nextAyah <= total) {
+      const nextUrl = buildAyahUrl(surahNum, nextAyah, selectedReciterKey);
+      if (!nextAudioRef.current) {
+        nextAudioRef.current = new Audio();
+      }
+      nextAudioRef.current.src = nextUrl;
+      nextAudioRef.current.preload = 'auto';
+      nextAudioRef.current.load();
+    }
+  }, [currentAyahNumber, selectedReciterKey, currentTrack]);
 
   useEffect(() => {
     if ('mediaSession' in navigator && currentTrack) {
@@ -123,7 +153,11 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
-      audioRef.current.play().then(() => setIsPlaying(true)).catch(console.error);
+      setIsAudioLoading(true);
+      audioRef.current.play().then(() => {
+        setIsPlaying(true);
+        setIsAudioLoading(false);
+      }).catch(console.error);
     }
   };
 
@@ -166,6 +200,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
       audioRef.current.currentTime = 0;
       audioRef.current.play();
     } else if (currentTrack?.playMode === 'surah' && currentTrack.totalVerses && currentAyahNumber < currentTrack.totalVerses) {
+      // Advance to next preloaded verse instantly
       setCurrentAyahNumber(prev => prev + 1);
     } else {
       setIsPlaying(false);
@@ -196,9 +231,13 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
       
       <audio
         ref={audioRef}
+        preload="auto"
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleEnded}
         onLoadedMetadata={handleTimeUpdate}
+        onWaiting={() => setIsAudioLoading(true)}
+        onCanPlay={() => setIsAudioLoading(false)}
+        onPlaying={() => setIsAudioLoading(false)}
       />
 
       {showMemSettings && (
@@ -244,7 +283,9 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
           <div className="flex items-center justify-between w-full lg:w-auto">
             <div className="flex items-center space-x-3 space-x-reverse min-w-0 flex-1">
               <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-lg bg-[#C5A059]/20 border border-[#C5A059]/40 flex items-center justify-center text-[#C5A059] shrink-0 relative">
-                {isMemMode ? (
+                {isAudioLoading ? (
+                  <Loader2 className="w-4 h-4 lg:w-5 lg:h-5 animate-spin" />
+                ) : isMemMode ? (
                   <Brain className={`w-4 h-4 lg:w-5 lg:h-5 ${isPlaying ? 'animate-pulse' : ''}`} />
                 ) : (
                   <Music className={`w-4 h-4 lg:w-5 lg:h-5 ${isPlaying ? 'animate-pulse' : ''}`} />
@@ -259,7 +300,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
                     سورة {currentTrack.surahName} - الآية {currentAyahNumber}
                   </span>
                 <span className="text-[10px] px-2 py-0.5 rounded bg-[#C5A059]/20 text-[#C5A059] shrink-0">
-                  {isMemMode ? 'وضع التحفيظ الذكي' : (currentTrack.playMode === 'surah' ? 'تلاوة السورة كاملة' : 'تلاوة حية صوتية MP3')}
+                  {isMemMode ? 'وضع التحفيظ الذكي' : (currentTrack.playMode === 'surah' ? 'تلاوة متواصلة (تلقائي)' : 'تلاوة آية')}
                 </span>
               </div>
               <p className="text-xs text-emerald-200/80 truncate flex items-center gap-2">
@@ -309,9 +350,16 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
 
               <button
                 onClick={togglePlay}
-                className="w-10 h-10 lg:w-11 lg:h-11 rounded-full bg-[#C5A059] text-gray-950 flex items-center justify-center shadow-md hover:scale-105 transition-transform shrink-0"
+                disabled={isAudioLoading}
+                className="w-10 h-10 lg:w-11 lg:h-11 rounded-full bg-[#C5A059] text-gray-950 flex items-center justify-center shadow-md hover:scale-105 transition-transform shrink-0 disabled:opacity-80"
               >
-                {isPlaying ? <Pause className="w-4 h-4 lg:w-5 lg:h-5 fill-current" /> : <Play className="w-4 h-4 lg:w-5 lg:h-5 fill-current mr-0.5" />}
+                {isAudioLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : isPlaying ? (
+                  <Pause className="w-4 h-4 lg:w-5 lg:h-5 fill-current" />
+                ) : (
+                  <Play className="w-4 h-4 lg:w-5 lg:h-5 fill-current mr-0.5" />
+                )}
               </button>
 
               <button 
@@ -378,7 +426,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
 
             <button
               onClick={onClose}
-              className="p-1 rounded-lg text-emerald-300 hover:text-white hover:bg-emerald-800 transition-colors"
+              className="p-1 rounded-lg text-emerald-300 hover:text-[#C5A059] transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
