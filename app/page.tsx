@@ -10,7 +10,7 @@ import { HadithBrowser } from '@/components/HadithBrowser';
 import { FiqhComparison } from '@/components/FiqhComparison';
 import { SeerahTimeline } from '@/components/SeerahTimeline';
 import { MuslimTools } from '@/components/MuslimTools';
-import { KhatmahPlanner } from '@/components/KhatmahPlanner';
+
 import { IslamicRadio } from '@/components/IslamicRadio';
 import { HijriCalendar } from '@/components/HijriCalendar';
 import { NamesOfAllah } from '@/components/NamesOfAllah';
@@ -213,7 +213,7 @@ export default function Home() {
                   { title: 'السيرة النبوية', desc: 'خط زمني تفاعلي لأحداث العصر النبوي', tab: 'seerah', color: 'border-blue-600' },
                   { title: 'أدوات المسلم', desc: 'مواقيت الصلاة، القبلة، والزكاة', tab: 'tools', color: 'border-emerald-600' },
                   { title: 'حاسبة الزكاة', desc: 'حساب النصاب تلقائياً بأسعار الذهب', link: '/zakat', color: 'border-emerald-600' },
-                  { title: 'مخطط الختمات', desc: 'خطط لختمتك الفردية أو العائلية', tab: 'khatmah', color: 'border-amber-500' }
+
                 ].map((m) => (
                   <div
                     key={m.title}
@@ -242,7 +242,7 @@ export default function Home() {
         {activeTab === 'adhkar' && <Adhkar />}
         {activeTab === 'fiqh' && <FiqhComparison />}
         {activeTab === 'seerah' && <SeerahTimeline />}
-        {activeTab === 'khatmah' && <div className="py-6 px-2"><KhatmahPlanner /></div>}
+
         {activeTab === 'radio' && <IslamicRadio />}
         {activeTab === 'calendar' && <HijriCalendar />}
         {activeTab === 'names' && <NamesOfAllah />}

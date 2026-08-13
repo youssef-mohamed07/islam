@@ -135,13 +135,6 @@ export const AuthManager: React.FC<AuthManagerProps> = ({ onNavigate }) => {
                 <div className="text-[11px] text-gray-500 mt-0.5">تفضيلات الحساب</div>
               </div>
 
-              <button
-                onClick={() => onNavigate('khatmah')}
-                className="bg-[#0F382C] text-white p-4 rounded-2xl font-bold text-xs flex flex-col items-center justify-center hover:bg-[#164E3D] transition-colors"
-              >
-                <span>متابعة الختمة</span>
-                <span className="text-[#C5A059] text-sm mt-1">←</span>
-              </button>
             </div>
 
             {/* Account Details */}

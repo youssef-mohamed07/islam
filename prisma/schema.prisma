@@ -48,8 +48,7 @@ model User {
   notes         Note[]
   histories     ReadingHistory[]
   folders       UserFolder[]
-  khatmahs      KhatmahPlan[]
-  khatmahAssignments KhatmahAssignment[]
+
 }
 
 model DataSource {
@@ -338,33 +337,3 @@ model FolderItem {
   createdAt  DateTime   @default(now())
 }
 
-model KhatmahPlan {
-  id              String   @id @default(uuid())
-  userId          String?
-  user            User?    @relation(fields: [userId], references: [id])
-  targetDays      Int      
-  pagesPerDay     Int      
-  startDate       DateTime @default(now())
-  isGroup         Boolean  @default(false)
-  groupName       String?
-  groupJoinCode   String?  @unique
-  status          String   @default("ACTIVE") // ACTIVE, COMPLETED, PAUSED
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  assignments     KhatmahAssignment[]
-}
-
-model KhatmahAssignment {
-  id          String       @id @default(uuid())
-  khatmahId   String
-  khatmah     KhatmahPlan  @relation(fields: [khatmahId], references: [id], onDelete: Cascade)
-  userId      String?
-  user        User?        @relation(fields: [userId], references: [id])
-  guestName   String?      // For unauthenticated users in a group link
-  juzNumber   Int?
-  startPage   Int
-  endPage     Int
-  status      String       @default("PENDING") // PENDING, READING, COMPLETED
-  completedAt DateTime?
-}
