@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Compass, Clock, Calculator, Calendar, HeartPulse, RefreshCw, MapPin } from 'lucide-react';
 
 export const MuslimTools: React.FC = () => {
@@ -26,29 +26,60 @@ export const MuslimTools: React.FC = () => {
   const [countdownString, setCountdownString] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
-  const handleOrientation = React.useCallback((event: any) => {
-    let compass = null;
-    if (event.webkitCompassHeading) {
-      compass = event.webkitCompassHeading;
-    } else if (event.absolute && event.alpha !== null) {
-      compass = 360 - event.alpha;
-    } else if (event.alpha !== null) {
-      compass = 360 - event.alpha;
+  // Compass smoothing: raw sensor events are throttled to rAF and low-pass
+  // filtered so the needle is steady instead of jittery.
+  const targetHeadingRef = useRef<number | null>(null);
+  const smoothHeadingRef = useRef<number | null>(null);
+  const rafRef = useRef<number | null>(null);
+
+  const tickCompass = useCallback(() => {
+    rafRef.current = null;
+    const target = targetHeadingRef.current;
+    if (target === null) return;
+    if (smoothHeadingRef.current === null) {
+      smoothHeadingRef.current = target;
+    } else {
+      // Shortest-path interpolation so 359°→0° never spins the long way around
+      const delta = ((target - smoothHeadingRef.current + 540) % 360) - 180;
+      smoothHeadingRef.current = (smoothHeadingRef.current + delta * 0.25 + 360) % 360;
     }
-    
-    if (compass !== null) {
-      setHeading(compass);
-    }
+    setHeading(smoothHeadingRef.current);
   }, []);
+
+  const handleOrientation = useCallback((event: any) => {
+    let compass: number | null = null;
+    if (typeof event.webkitCompassHeading === 'number' && !isNaN(event.webkitCompassHeading)) {
+      compass = event.webkitCompassHeading; // iOS: true-north heading (0 is valid!)
+    } else if (event.alpha !== null && event.alpha !== undefined) {
+      compass = 360 - event.alpha;
+    }
+    if (compass !== null) {
+      targetHeadingRef.current = compass;
+      if (rafRef.current === null) rafRef.current = requestAnimationFrame(tickCompass);
+    }
+  }, [tickCompass]);
+
+  const attachCompassListeners = useCallback(() => {
+    window.removeEventListener('deviceorientation', handleOrientation, true);
+    window.removeEventListener('deviceorientationabsolute', handleOrientation, true);
+    // Prefer absolute (true-north) events; only fall back when unsupported,
+    // otherwise the relative event overwrites the correct reading.
+    if (typeof (window as any).ondeviceorientationabsolute !== 'undefined') {
+      window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+    } else {
+      window.addEventListener('deviceorientation', handleOrientation, true);
+    }
+  }, [handleOrientation]);
 
   const requestCompassPermission = async () => {
     if (typeof window !== 'undefined') {
-      if (typeof (DeviceOrientationEvent as any) !== 'undefined' && typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+      const DOE = DeviceOrientationEvent as any;
+      if (typeof DOE !== 'undefined' && typeof DOE.requestPermission === 'function') {
         try {
-          const permission = await (DeviceOrientationEvent as any).requestPermission();
+          const permission = await DOE.requestPermission();
           if (permission === 'granted') {
             setCompassPermission('granted');
-            window.addEventListener('deviceorientation', handleOrientation, true);
+            attachCompassListeners();
           } else {
             setCompassPermission('denied');
           }
@@ -58,8 +89,7 @@ export const MuslimTools: React.FC = () => {
         }
       } else {
         setCompassPermission('granted');
-        window.addEventListener('deviceorientationabsolute', handleOrientation, true);
-        window.addEventListener('deviceorientation', handleOrientation, true);
+        attachCompassListeners();
       }
     }
   };
@@ -70,6 +100,7 @@ export const MuslimTools: React.FC = () => {
         window.removeEventListener('deviceorientation', handleOrientation, true);
         window.removeEventListener('deviceorientationabsolute', handleOrientation, true);
       }
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
   }, [handleOrientation]);
 
@@ -328,13 +359,14 @@ export const MuslimTools: React.FC = () => {
                   )}
                 </div>
               ) : (
+                <>
                 <div 
                   className="relative mx-auto mb-12 flex items-center justify-center mt-12"
                   style={{ width: '280px', height: '280px', minHeight: '280px' }}
                 >
                   {/* The Rotating Compass Wheel */}
                   <div 
-                    className="absolute inset-0 rounded-full border-2 border-emerald-900/10 dark:border-emerald-700/30 shadow-[0_10px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4)] flex items-center justify-center bg-white dark:bg-[#0D1412] transition-transform duration-300 ease-out"
+                    className="absolute inset-0 rounded-full border-2 border-emerald-900/10 dark:border-emerald-700/30 shadow-[0_10px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4)] flex items-center justify-center bg-white dark:bg-[#0D1412] will-change-transform"
                     style={{ transform: `rotate(${heading !== null ? -heading : 0}deg)` }}
                   >
                     {/* Tick marks around the compass */}
@@ -383,6 +415,12 @@ export const MuslimTools: React.FC = () => {
                      <div className="mt-1 bg-blue-500 text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-md whitespace-nowrap">اتجاه الهاتف</div>
                   </div>
                 </div>
+                {heading === null && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500 -mt-6 mb-4 px-4">
+                    لا تصل بيانات البوصلة بعد — حرّك هاتفك قليلاً بعيداً عن أي مغناطيس، وتأكد أن الصفحة مفتوحة على هاتف يدعم البوصلة.
+                  </p>
+                )}
+                </>
               )}
 
               <div className="flex justify-center items-center gap-8 mt-4 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-2xl border border-gray-100 dark:border-gray-800">
