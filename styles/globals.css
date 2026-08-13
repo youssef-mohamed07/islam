@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+/* Enable class-based dark mode (Tailwind v4) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* === Custom Theme (migrated from tailwind.config.js) === */
+@theme {
+  --color-ivory-50: #FAF8F5;
+  --color-ivory-100: #F5F1EB;
+  --color-ivory-200: #EBE4D8;
+  --color-ivory: #FDFBF7;
+
+  --color-emerald-800: #164E3D;
+  --color-emerald-900: #0F382C;
+  --color-emerald-950: #0B2920;
+
+  --color-sage-600: #2A5C4D;
+  --color-sage-700: #20463B;
+  --color-sage-800: #17332B;
+  --color-sage: #2A5C4D;
+
+  --color-gold-400: #D4AF37;
+  --color-gold-500: #C5A059;
+  --color-gold-600: #B28E46;
+  --color-gold: #C5A059;
+
+  --color-charcoal-800: #1F2926;
+  --color-charcoal-900: #141C19;
+  --color-charcoal: #141C19;
+
+  --font-quran: 'Scheherazade New', 'Amiri Quran', serif;
+  --font-arabic: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
+
+  --shadow-soft: 0 4px 20px -2px rgba(15, 56, 44, 0.06);
+  --shadow-card: 0 10px 30px -5px rgba(15, 56, 44, 0.08);
+}
+
+/* === CSS Variables for Dark Mode === */
+:root {
+  --bg-primary: #FDFBF7;
+  --text-primary: #1A2421;
+  --brand-emerald: #0F382C;
+  --brand-gold: #C5A059;
+}
+
+.dark {
+  --bg-primary: #0D1412;
+  --text-primary: #F5F7F6;
+  --brand-emerald: #164E3D;
+  --brand-gold: #D4AF37;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+  direction: rtl;
+  text-align: right;
+  min-height: 100vh;
+}
+
+.font-quran {
+  font-family: 'Scheherazade New', 'Amiri Quran', serif;
+  line-height: 2.2;
+}
+
+/* Custom serene scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 56, 44, 0.03);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(15, 56, 44, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 56, 44, 0.4);
+}
+
+/* App-like feel on mobile */
+html,
+body {
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+  /* Never allow page-level horizontal scrolling (clip keeps sticky working) */
+  overflow-x: clip;
+}
+
+/* Hide scrollbars for horizontal chip rows while keeping them scrollable */
+.no-scrollbar,
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar,
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Bottom sheet entrance */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}

@@ -1,0 +1,370 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  EDITOR
+  SCHOLAR_VERIFIER
+  ADMIN
+}
+
+enum VerificationStatus {
+  DRAFT
+  PENDING_REVIEW
+  VERIFIED
+  REJECTED
+}
+
+enum HadithGrade {
+  SAHIH
+  HASAN
+  DAIF
+  MAWDU
+}
+
+enum Madhhab {
+  HANAFI
+  MALIKI
+  SHAFI
+  HANBALI
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  passwordHash  String
+  name          String
+  role          Role           @default(USER)
+  avatar        String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  bookmarks     Bookmark[]
+  favorites     Favorite[]
+  notes         Note[]
+  histories     ReadingHistory[]
+  folders       UserFolder[]
+  khatmahs      KhatmahPlan[]
+  khatmahAssignments KhatmahAssignment[]
+}
+
+model DataSource {
+  id                 String             @id @default(uuid())
+  name               String
+  sourceUrl          String?
+  license            String
+  importedAt         DateTime           @default(now())
+  verificationStatus VerificationStatus @default(PENDING_REVIEW)
+  references         SourceReference[]
+}
+
+model SourceReference {
+  id                 String             @id @default(uuid())
+  sourceId           String
+  source             DataSource         @relation(fields: [sourceId], references: [id])
+  bookTitle          String?
+  authorName         String?
+  publisher          String?
+  edition            String?
+  license            String
+  verificationStatus VerificationStatus @default(VERIFIED)
+  createdAt          DateTime           @default(now())
+  
+  tafsirEntries      TafsirEntry[]
+  hadiths            Hadith[]
+  fiqhRulings        FiqhRuling[]
+  books              Book[]
+  dhikrs             Dhikr[]
+}
+
+model Surah {
+  id              Int           @id
+  nameArabic      String
+  nameComplex     String
+  nameEnglish     String
+  revelationPlace String
+  versesCount     Int
+  revelationOrder Int
+  bismillahPre    Boolean       @default(true)
+  pageStart       Int
+  pageEnd         Int
+  ayahs           Ayah[]
+  tafsirEntries   TafsirEntry[]
+}
+
+model Ayah {
+  id            Int           @id @default(autoincrement())
+  surahId       Int
+  surah         Surah         @relation(fields: [surahId], references: [id])
+  ayahNumber    Int
+  textUthmanic  String
+  textSimple    String
+  juzNumber     Int
+  hizbNumber    Int
+  rubNumber     Int
+  pageNumber    Int
+  translations  Json?
+  tafsirEntries TafsirEntry[]
+  bookmarks     Bookmark[]
+
+  @@unique([surahId, ayahNumber])
+}
+
+model Qiraah {
+  id          String    @id
+  nameArabic  String
+  nameEnglish String
+  imamName    String
+  description String?
+  riwayas     Riwayah[]
+}
+
+model Riwayah {
+  id          String     @id
+  qiraahId    String
+  qiraah      Qiraah     @relation(fields: [qiraahId], references: [id])
+  nameArabic  String
+  nameEnglish String
+  rawiName    String
+  reciters    Reciter[]
+}
+
+model Reciter {
+  id              String       @id
+  nameArabic      String
+  nameEnglish     String
+  bio             String?
+  riwayahId       String
+  riwayah         Riwayah      @relation(fields: [riwayahId], references: [id])
+  profileImage    String?
+  hasGaplessAudio Boolean      @default(true)
+  recitations     Recitation[]
+}
+
+model Recitation {
+  id          String   @id @default(uuid())
+  reciterId   String
+  reciter     Reciter  @relation(fields: [reciterId], references: [id])
+  surahId     Int
+  audioUrl    String
+  durationSec Int?
+}
+
+model TafsirBook {
+  id              String        @id
+  slug            String        @unique
+  nameArabic      String
+  nameEnglish     String
+  authorName      String
+  authorDeathYear Int?
+  language        String        @default("ar")
+  entries         TafsirEntry[]
+}
+
+model TafsirEntry {
+  id            String           @id @default(uuid())
+  tafsirBookId  String
+  tafsirBook    TafsirBook       @relation(fields: [tafsirBookId], references: [id])
+  surahId       Int
+  surah         Surah            @relation(fields: [surahId], references: [id])
+  ayahNumber    Int
+  ayah          Ayah             @relation(fields: [surahId, ayahNumber], references: [surahId, ayahNumber])
+  text          String
+  sourceRefId   String?
+  sourceRef     SourceReference? @relation(fields: [sourceRefId], references: [id])
+
+  @@unique([tafsirBookId, surahId, ayahNumber])
+}
+
+model HadithCollection {
+  id           String   @id
+  slug         String   @unique
+  nameArabic   String
+  nameEnglish  String
+  authorName   String
+  totalHadiths Int
+  hasGrading   Boolean  @default(true)
+  hadiths      Hadith[]
+}
+
+model Hadith {
+  id            String           @id @default(uuid())
+  collectionId  String
+  collection    HadithCollection @relation(fields: [collectionId], references: [id])
+  bookNumber    Int
+  chapterNumber Int
+  hadithNumber  Int
+  narratorChain String?          // Sanad (إسناد)
+  textArabic    String
+  textEnglish   String?
+  grade         HadithGrade      @default(SAHIH)
+  gradeArabic   String           @default("صحيح")
+  sourceRefId   String?
+  sourceRef     SourceReference? @relation(fields: [sourceRefId], references: [id])
+
+  @@unique([collectionId, hadithNumber])
+}
+
+model FiqhRuling {
+  id            String           @id @default(uuid())
+  topicArabic   String
+  topicEnglish  String?
+  madhhab       Madhhab
+  rulingSummary String
+  evidence      String
+  sourceBook    String
+  scholarName   String?
+  sourceRefId   String?
+  sourceRef     SourceReference? @relation(fields: [sourceRefId], references: [id])
+}
+
+model SeerahEvent {
+  id           String   @id @default(uuid())
+  titleArabic  String
+  titleEnglish String?
+  era          String
+  yearHijri    Int?
+  yearAH       Int?
+  description  String
+  location     String?
+}
+
+model Scholar {
+  id               String   @id @default(uuid())
+  nameArabic       String
+  nameEnglish      String
+  title            String?
+  birthYearAH      Int?
+  deathYearAH      Int?
+  era              String
+  biography        String
+  famousWorks      String[]
+  fieldOfExpertise String[]
+}
+
+model Book {
+  id          String           @id @default(uuid())
+  titleArabic String
+  authorName  String
+  category    String
+  description String
+  coverImage  String?
+  license     String
+  sourceRefId String?
+  sourceRef   SourceReference? @relation(fields: [sourceRefId], references: [id])
+}
+
+model Dhikr {
+  id            String           @id @default(uuid())
+  category      String
+  categoryArabic String
+  textArabic    String
+  translation   String?
+  count         Int              @default(1)
+  benefit       String?
+  sourceRefId   String?
+  sourceRef     SourceReference? @relation(fields: [sourceRefId], references: [id])
+}
+
+model Bookmark {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  surahId   Int
+  ayahNumber Int
+  ayah      Ayah     @relation(fields: [surahId, ayahNumber], references: [surahId, ayahNumber])
+  createdAt DateTime @default(now())
+}
+
+model Favorite {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  entityType String
+  entityId   String
+  createdAt  DateTime @default(now())
+}
+
+model Note {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  targetType String
+  targetId   String
+  content    String
+  createdAt  DateTime @default(now())
+}
+
+model ReadingHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  surahId   Int
+  ayahNumber Int
+  updatedAt DateTime @updatedAt
+}
+
+model ImportJob {
+  id          String             @id @default(uuid())
+  sourceName  String
+  adapterType String
+  status      VerificationStatus @default(PENDING_REVIEW)
+  recordsCount Int               @default(0)
+  createdAt   DateTime           @default(now())
+}
+
+model UserFolder {
+  id        String       @id @default(uuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id])
+  name      String
+  color     String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  items     FolderItem[]
+}
+
+model FolderItem {
+  id         String     @id @default(uuid())
+  folderId   String
+  folder     UserFolder @relation(fields: [folderId], references: [id])
+  targetType String     // e.g. "HADITH", "AYAH", "FIQH", "NOTE"
+  targetId   String     // ID of the target
+  content    String?    // Optional text content
+  createdAt  DateTime   @default(now())
+}
+
+model KhatmahPlan {
+  id              String   @id @default(uuid())
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id])
+  targetDays      Int      
+  pagesPerDay     Int      
+  startDate       DateTime @default(now())
+  isGroup         Boolean  @default(false)
+  groupName       String?
+  groupJoinCode   String?  @unique
+  status          String   @default("ACTIVE") // ACTIVE, COMPLETED, PAUSED
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  assignments     KhatmahAssignment[]
+}
+
+model KhatmahAssignment {
+  id          String       @id @default(uuid())
+  khatmahId   String
+  khatmah     KhatmahPlan  @relation(fields: [khatmahId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?        @relation(fields: [userId], references: [id])
+  guestName   String?      // For unauthenticated users in a group link
+  juzNumber   Int?
+  startPage   Int
+  endPage     Int
+  status      String       @default("PENDING") // PENDING, READING, COMPLETED
+  completedAt DateTime?
+}
