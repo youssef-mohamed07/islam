@@ -80,6 +80,25 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
     return `https://everyayah.com/data/${folder}/${pad3(surahNum)}${pad3(ayahNum)}.mp3`;
   };
 
+  const fullSurahServers: Record<string, string> = {
+    'Minshawy_Murattal_128kbps': 'https://server10.mp3quran.net/minsh/',
+    'Husary_128kbps': 'https://server13.mp3quran.net/husr/',
+    'Abdul_Basit_Murattal_192kbps': 'https://server7.mp3quran.net/basit/',
+    'Alafasy_128kbps': 'https://server8.mp3quran.net/afs/',
+    'Abdurrahmaan_As-Sudais_192kbps': 'https://server11.mp3quran.net/sds/',
+    'Saood_ash-Shuraym_128kbps': 'https://server7.mp3quran.net/shur/',
+    'Abu_Bakr_Ash-Shaatree_128kbps': 'https://server11.mp3quran.net/shatri/',
+    'Hudhaify_128kbps': 'https://server9.mp3quran.net/hthfi/',
+    'Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net': 'https://server10.mp3quran.net/ajm/',
+    'Abdul_Basit_Mujawwad_128kbps': 'https://server7.mp3quran.net/basit_mjwd/',
+    'Saad_Al_Ghamdi_128kbps': 'https://server10.mp3quran.net/s_gmd/',
+    'Abdullaah_3awwaad_Al-Juhaynee_128kbps': 'https://server13.mp3quran.net/jhn/',
+    'MauroAl_Muaiqly128kbps': 'https://server12.mp3quran.net/maher/',
+    'mahmoud_ali_al_banna_32kbps': 'https://server8.mp3quran.net/banna/',
+    'Mohammad_al_Tablaway_128kbps': 'https://server12.mp3quran.net/tblawi/',
+    'Yasser_Ad-Dussary_128kbps': 'https://server11.mp3quran.net/yasser/',
+  };
+
   useEffect(() => {
     if (currentTrack) {
       setCurrentAyahNumber(currentTrack.ayahNumber);
@@ -151,6 +170,22 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
     const { active, inactive } = getPlayers();
 
     if (!active || !inactive) return;
+
+    // If full surah mode, use the single MP3 file for seamless playback
+    if (currentTrack.playMode === 'surah' && fullSurahServers[selectedReciterKey]) {
+      setIsAudioLoading(true);
+      active.src = `${fullSurahServers[selectedReciterKey]}${pad3(surahNum)}.mp3`;
+      active.playbackRate = playbackSpeed;
+      active.play().then(() => {
+        setIsPlaying(true);
+        setIsAudioLoading(false);
+      }).catch((err) => {
+        console.warn('Audio play error:', err);
+        setIsPlaying(false);
+        setIsAudioLoading(false);
+      });
+      return; // Skip dual-audio preloading for full surah
+    }
 
     // If we just auto-advanced from onEnded, the active player is ALREADY playing the correct audio.
     // We only need to preload the NEXT verse into the new inactive player.
@@ -278,6 +313,12 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
            }
        }
        return;
+    }
+
+    if (currentTrack?.playMode === 'surah' && fullSurahServers[selectedReciterKey]) {
+        // Full surah just ended
+        setIsPlaying(false);
+        return;
     }
 
     if (isRepeat) {
@@ -409,10 +450,10 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
               <div className="truncate">
                 <div className="flex items-center space-x-2 space-x-reverse">
                   <span className="font-bold text-xs lg:text-sm text-white truncate min-w-0">
-                    سورة {currentTrack.surahName} - الآية {currentAyahNumber}
+                    سورة {currentTrack.surahName} {currentTrack.playMode === 'surah' ? '- تلاوة كاملة' : `- الآية ${currentAyahNumber}`}
                   </span>
                 <span className="text-[10px] px-2 py-0.5 rounded bg-[#C5A059]/20 text-[#C5A059] shrink-0">
-                  {isMemMode ? 'وضع التحفيظ الذكي' : (currentTrack.playMode === 'surah' ? 'تلاوة متواصلة (تلقائي)' : 'تلاوة آية')}
+                  {isMemMode ? 'وضع التحفيظ الذكي' : (currentTrack.playMode === 'surah' ? 'تلاوة متواصلة' : 'تلاوة آية')}
                 </span>
               </div>
               <div className="text-xs text-emerald-200/80 flex items-center gap-2">
