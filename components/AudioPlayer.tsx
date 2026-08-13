@@ -38,8 +38,16 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
   const [currentBlockRepeat, setCurrentBlockRepeat] = useState<number>(0);
   const [showMemSettings, setShowMemSettings] = useState(false);
 
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const nextAudioRef = useRef<HTMLAudioElement | null>(null);
+  const audio1Ref = useRef<HTMLAudioElement | null>(null);
+  const audio2Ref = useRef<HTMLAudioElement | null>(null);
+  const activePlayerIdRef = useRef<1 | 2>(1);
+  const autoAdvanceInProgress = useRef(false);
+
+  const getPlayers = () => {
+    const active = activePlayerIdRef.current === 1 ? audio1Ref.current : audio2Ref.current;
+    const inactive = activePlayerIdRef.current === 1 ? audio2Ref.current : audio1Ref.current;
+    return { active, inactive };
+  };
 
   const reciterFolders: Record<string, string> = {
     'reciter-minshawi': 'Minshawy_Murattal_128kbps',
@@ -66,16 +74,6 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
     return `https://everyayah.com/data/${folder}/${pad3(surahNum)}${pad3(ayahNum)}.mp3`;
   };
 
-  const getAudioUrl = () => {
-    if (currentTrack?.audioUrl) return currentTrack.audioUrl;
-    const surahNum = currentTrack?.surahId || 1;
-    const ayahNum = currentAyahNumber;
-    const folder = selectedReciterKey;
-    return buildAyahUrl(surahNum, ayahNum, folder);
-  };
-
-  const audioSrc = currentTrack ? getAudioUrl() : '';
-
   useEffect(() => {
     if (currentTrack) {
       setCurrentAyahNumber(currentTrack.ayahNumber);
@@ -84,40 +82,50 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
     }
   }, [currentTrack]);
 
-  // Audio loading & playback effect
-  useEffect(() => {
-    if (currentTrack && audioRef.current) {
-      setIsAudioLoading(true);
-      audioRef.current.src = audioSrc;
-      audioRef.current.playbackRate = playbackSpeed;
-      audioRef.current.play().then(() => {
-        setIsPlaying(true);
-        setIsAudioLoading(false);
-      }).catch((err) => {
-        console.warn('Audio play error:', err);
-        setIsPlaying(false);
-        setIsAudioLoading(false);
-      });
-    }
-  }, [currentTrack, selectedReciterKey, currentAyahNumber]);
-
-  // Preload NEXT Ayah Audio in background for gapless playback
+  // Dual-Audio Engine Logic
   useEffect(() => {
     if (!currentTrack) return;
     const surahNum = currentTrack.surahId || 1;
-    const nextAyah = currentAyahNumber + 1;
     const total = currentTrack.totalVerses || 286;
+    const { active, inactive } = getPlayers();
 
-    if (nextAyah <= total) {
-      const nextUrl = buildAyahUrl(surahNum, nextAyah, selectedReciterKey);
-      if (!nextAudioRef.current) {
-        nextAudioRef.current = new Audio();
+    if (!active || !inactive) return;
+
+    // If we just auto-advanced from onEnded, the active player is ALREADY playing the correct audio.
+    // We only need to preload the NEXT verse into the new inactive player.
+    if (autoAdvanceInProgress.current) {
+      autoAdvanceInProgress.current = false;
+      const nextAyah = currentAyahNumber + 1;
+      if (nextAyah <= total) {
+        inactive.src = buildAyahUrl(surahNum, nextAyah, selectedReciterKey);
+        inactive.playbackRate = playbackSpeed;
+        inactive.load();
       }
-      nextAudioRef.current.src = nextUrl;
-      nextAudioRef.current.preload = 'auto';
-      nextAudioRef.current.load();
+      return;
     }
-  }, [currentAyahNumber, selectedReciterKey, currentTrack]);
+
+    // Otherwise, this is a manual track change (user clicked a verse, changed reciter, etc.)
+    setIsAudioLoading(true);
+    active.src = currentTrack.audioUrl || buildAyahUrl(surahNum, currentAyahNumber, selectedReciterKey);
+    active.playbackRate = playbackSpeed;
+    
+    active.play().then(() => {
+      setIsPlaying(true);
+      setIsAudioLoading(false);
+    }).catch((err) => {
+      console.warn('Audio play error:', err);
+      setIsPlaying(false);
+      setIsAudioLoading(false);
+    });
+
+    // Preload the next verse immediately
+    const nextAyah = currentAyahNumber + 1;
+    if (nextAyah <= total) {
+      inactive.src = buildAyahUrl(surahNum, nextAyah, selectedReciterKey);
+      inactive.playbackRate = playbackSpeed;
+      inactive.load();
+    }
+  }, [currentTrack, selectedReciterKey, currentAyahNumber]);
 
   useEffect(() => {
     if ('mediaSession' in navigator && currentTrack) {
@@ -132,53 +140,68 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
       });
 
       navigator.mediaSession.setActionHandler('play', () => {
-        audioRef.current?.play().then(() => setIsPlaying(true)).catch(console.error);
+        const { active } = getPlayers();
+        active?.play().then(() => setIsPlaying(true)).catch(console.error);
       });
       navigator.mediaSession.setActionHandler('pause', () => {
-        audioRef.current?.pause();
+        const { active } = getPlayers();
+        active?.pause();
         setIsPlaying(false);
       });
       navigator.mediaSession.setActionHandler('previoustrack', () => {
-        if (audioRef.current) audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 5);
+        const { active } = getPlayers();
+        if (active) active.currentTime = Math.max(0, active.currentTime - 5);
       });
       navigator.mediaSession.setActionHandler('nexttrack', () => {
-        if (audioRef.current && duration) audioRef.current.currentTime = Math.min(duration, audioRef.current.currentTime + 5);
+        const { active } = getPlayers();
+        if (active && duration) active.currentTime = Math.min(duration, active.currentTime + 5);
       });
     }
   }, [currentTrack, currentAyahNumber, selectedReciterKey, duration]);
 
   const togglePlay = () => {
-    if (!audioRef.current) return;
+    const { active } = getPlayers();
+    if (!active) return;
     if (isPlaying) {
-      audioRef.current.pause();
+      active.pause();
       setIsPlaying(false);
     } else {
       setIsAudioLoading(true);
-      audioRef.current.play().then(() => {
+      active.play().then(() => {
         setIsPlaying(true);
         setIsAudioLoading(false);
       }).catch(console.error);
     }
   };
 
-  const handleTimeUpdate = () => {
-    if (audioRef.current) {
-      setCurrentTime(audioRef.current.currentTime);
-      setDuration(audioRef.current.duration || 0);
+  const handleTimeUpdate = (playerId: 1 | 2) => {
+    if (activePlayerIdRef.current !== playerId) return;
+    const { active } = getPlayers();
+    if (active) {
+      setCurrentTime(active.currentTime);
+      setDuration(active.duration || 0);
     }
   };
 
-  const handleEnded = () => {
-    if (!audioRef.current) return;
+  const handleEnded = (playerId: 1 | 2) => {
+    if (activePlayerIdRef.current !== playerId) return;
+    const { active, inactive } = getPlayers();
+    if (!active || !inactive) return;
 
     if (isMemMode) {
        if (currentAyahRepeat < ayahRepeatCount - 1) {
            setCurrentAyahRepeat(prev => prev + 1);
-           audioRef.current.currentTime = 0;
-           audioRef.current.play();
+           active.currentTime = 0;
+           active.play();
        } else {
            if (currentAyahNumber < memEndAyah) {
                setCurrentAyahRepeat(0);
+               autoAdvanceInProgress.current = true;
+               
+               inactive.playbackRate = playbackSpeed;
+               inactive.play().then(() => setIsPlaying(true)).catch(console.error);
+               activePlayerIdRef.current = activePlayerIdRef.current === 1 ? 2 : 1;
+               
                setCurrentAyahNumber(prev => prev + 1);
            } else {
                if (currentBlockRepeat < blockRepeatCount - 1) {
@@ -197,10 +220,15 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
     }
 
     if (isRepeat) {
-      audioRef.current.currentTime = 0;
-      audioRef.current.play();
+      active.currentTime = 0;
+      active.play();
     } else if (currentTrack?.playMode === 'surah' && currentTrack.totalVerses && currentAyahNumber < currentTrack.totalVerses) {
-      // Advance to next preloaded verse instantly
+      // TRUE GAPLESS AUTO-ADVANCE: Play the preloaded audio instantly before React renders
+      autoAdvanceInProgress.current = true;
+      inactive.playbackRate = playbackSpeed;
+      inactive.play().then(() => setIsPlaying(true)).catch(console.error);
+      activePlayerIdRef.current = activePlayerIdRef.current === 1 ? 2 : 1;
+      
       setCurrentAyahNumber(prev => prev + 1);
     } else {
       setIsPlaying(false);
@@ -212,9 +240,9 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
     const nextIndex = (speeds.indexOf(playbackSpeed) + 1) % speeds.length;
     const newSpeed = speeds[nextIndex];
     setPlaybackSpeed(newSpeed);
-    if (audioRef.current) {
-      audioRef.current.playbackRate = newSpeed;
-    }
+    const { active, inactive } = getPlayers();
+    if (active) active.playbackRate = newSpeed;
+    if (inactive) inactive.playbackRate = newSpeed;
   };
 
   const formatTime = (seconds: number) => {
@@ -229,15 +257,26 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
   return (
     <div className="fixed bottom-[95px] lg:bottom-0 left-2 right-2 lg:left-0 lg:right-0 z-40 bg-[#0F382C] lg:rounded-none rounded-2xl text-[#FDFBF7] border border-[#C5A059]/30 lg:border-t lg:border-x-0 lg:border-b-0 shadow-2xl transition-all overflow-hidden flex flex-col">
       
+      {/* Dual Audio Engine */}
       <audio
-        ref={audioRef}
+        ref={audio1Ref}
         preload="auto"
-        onTimeUpdate={handleTimeUpdate}
-        onEnded={handleEnded}
-        onLoadedMetadata={handleTimeUpdate}
-        onWaiting={() => setIsAudioLoading(true)}
-        onCanPlay={() => setIsAudioLoading(false)}
-        onPlaying={() => setIsAudioLoading(false)}
+        onTimeUpdate={() => handleTimeUpdate(1)}
+        onEnded={() => handleEnded(1)}
+        onLoadedMetadata={() => handleTimeUpdate(1)}
+        onWaiting={() => activePlayerIdRef.current === 1 && setIsAudioLoading(true)}
+        onCanPlay={() => activePlayerIdRef.current === 1 && setIsAudioLoading(false)}
+        onPlaying={() => activePlayerIdRef.current === 1 && setIsAudioLoading(false)}
+      />
+      <audio
+        ref={audio2Ref}
+        preload="auto"
+        onTimeUpdate={() => handleTimeUpdate(2)}
+        onEnded={() => handleEnded(2)}
+        onLoadedMetadata={() => handleTimeUpdate(2)}
+        onWaiting={() => activePlayerIdRef.current === 2 && setIsAudioLoading(true)}
+        onCanPlay={() => activePlayerIdRef.current === 2 && setIsAudioLoading(false)}
+        onPlaying={() => activePlayerIdRef.current === 2 && setIsAudioLoading(false)}
       />
 
       {showMemSettings && (
@@ -269,7 +308,10 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
                      setCurrentBlockRepeat(0);
                      setShowMemSettings(false);
                      setIsPlaying(false);
-                     setTimeout(() => { if(audioRef.current) audioRef.current.play().then(()=>setIsPlaying(true)); }, 100);
+                     setTimeout(() => { 
+                       const { active } = getPlayers();
+                       if(active) active.play().then(()=>setIsPlaying(true)); 
+                     }, 100);
                  }} className="bg-[#C5A059] text-gray-900 px-6 py-2 rounded-xl text-xs font-bold transition-transform active:scale-95">بدء التحفيظ</button>
                  <button onClick={() => { setShowMemSettings(false); }} className="bg-gray-800 text-white px-4 py-2 rounded-xl text-xs font-bold">إغلاق</button>
                </div>
@@ -340,7 +382,8 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
 
               <button 
                 onClick={() => {
-                  if (audioRef.current) audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 5);
+                  const { active } = getPlayers();
+                  if (active) active.currentTime = Math.max(0, active.currentTime - 5);
                 }}
                 className="text-emerald-200 hover:text-white transition-colors"
                 title="تأخير 5 ثواني"
@@ -364,7 +407,8 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
 
               <button 
                 onClick={() => {
-                  if (audioRef.current) audioRef.current.currentTime = Math.min(duration, audioRef.current.currentTime + 5);
+                  const { active } = getPlayers();
+                  if (active) active.currentTime = Math.min(duration, active.currentTime + 5);
                 }}
                 className="text-emerald-200 hover:text-white transition-colors"
                 title="تقديم 5 ثواني"
@@ -385,11 +429,12 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
               <div 
                 className="flex-1 h-1.5 lg:h-1.5 bg-emerald-950 rounded-full cursor-pointer overflow-hidden relative"
                 onClick={(e) => {
-                  if (!audioRef.current || !duration) return;
+                  const { active } = getPlayers();
+                  if (!active || !duration) return;
                   const rect = e.currentTarget.getBoundingClientRect();
                   const clickX = e.clientX - rect.left;
                   const pct = clickX / rect.width;
-                  audioRef.current.currentTime = pct * duration;
+                  active.currentTime = pct * duration;
                 }}
               >
                 <div 
@@ -404,10 +449,10 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
           <div className="hidden lg:flex items-center space-x-3 space-x-reverse shrink-0">
             <button
               onClick={() => {
-                if (audioRef.current) {
-                  audioRef.current.muted = !isMuted;
-                  setIsMuted(!isMuted);
-                }
+                const { active, inactive } = getPlayers();
+                if (active) active.muted = !isMuted;
+                if (inactive) inactive.muted = !isMuted;
+                setIsMuted(!isMuted);
               }}
               className="text-emerald-300 hover:text-white p-1"
             >
