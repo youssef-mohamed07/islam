@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { Search, BookOpen, Moon, Sun, Globe, User, Sparkles, Compass, ShieldCheck, Menu, X } from 'lucide-react';
 import { ar } from '@/lib/i18n';
 
@@ -51,13 +52,13 @@ export const Header: React.FC<HeaderProps> = ({
           
           {/* Logo & Brand */}
           <div className="flex items-center space-x-2 sm:space-x-3 space-x-reverse cursor-pointer" onClick={() => setActiveTab('home')}>
-            <div className="w-9 h-9 md:w-11 md:h-11 rounded-xl bg-[#0F382C] text-[#C5A059] flex items-center justify-center shadow-md font-quran text-xl md:text-2xl font-bold border border-[#C5A059]/30">
-              س
+            <div className="relative w-10 h-10 md:w-12 md:h-12 rounded-xl overflow-hidden shadow-md border border-[#C5A059]/30">
+              <Image src="/logo.jpg" alt="خير سند" fill className="object-cover" />
             </div>
             <div>
               <div className="flex items-center space-x-2 space-x-reverse">
                 <span className="font-extrabold text-lg sm:text-2xl tracking-tight text-[#0F382C] dark:text-[#F5F7F6]">
-                  {t.brand.name}
+                  خير سند
                 </span>
                 <span className="hidden sm:inline-block text-[10px] px-2 py-0.5 rounded-full bg-[#C5A059]/15 text-[#0F382C] dark:text-[#C5A059] font-medium border border-[#C5A059]/30">
                   سَنَدٌ مُحَقَّقٌ

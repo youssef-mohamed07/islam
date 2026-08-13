@@ -2,15 +2,19 @@ import type { Metadata, Viewport } from 'next';
 import './compiled.css';
 
 export const metadata: Metadata = {
-  title: 'سَنَد | المنصة الرقمية المحققة للمعرفة الإسلامية',
+  title: 'خير سند | المنصة الرقمية المحققة للمعرفة الإسلامية',
   description: 'منصة معرفية إسلامية تجمع القرآن الكريم والقراءات والتفسير والحديث والمكتبة والفقه والسيرة والأذكار في تجربة رقمية واحدة.',
-  keywords: ['القرآن الكريم', 'التفسير', 'الحديث الشريف', 'الفقه', 'السيرة النبوية', 'أذكار', 'مواقيت الصلاة', 'سند'],
+  keywords: ['القرآن الكريم', 'التفسير', 'الحديث الشريف', 'الفقه', 'السيرة النبوية', 'أذكار', 'مواقيت الصلاة', 'خير سند'],
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'سَنَد',
+    title: 'خير سند',
   },
+  icons: {
+    icon: '/logo.jpg',
+    apple: '/logo.jpg',
+  }
 };
 
 export const viewport: Viewport = {
