@@ -105,8 +105,7 @@ export default function Home() {
                   { label: 'اقرأ القرآن', tab: 'quran', icon: BookOpen },
                   { label: 'استمع للقرآن', tab: 'quran', icon: Play },
                   { label: 'أذكار اليوم', tab: 'adhkar', icon: HeartPulse },
-                  { label: 'مواقيت الصلاة', tab: 'tools', icon: Compass },
-                  { label: 'مساعد سند AI', tab: 'ai', icon: Sparkles }
+                  { label: 'مواقيت الصلاة', tab: 'tools', icon: Compass }
                 ].map((action) => {
                   const Icon = action.icon;
                   return (
@@ -207,8 +206,7 @@ export default function Home() {
                   { title: 'السيرة النبوية', desc: 'خط زمني تفاعلي لأحداث العصر النبوي', tab: 'seerah', color: 'border-blue-600' },
                   { title: 'أدوات المسلم', desc: 'مواقيت الصلاة، القبلة، والزكاة', tab: 'tools', color: 'border-emerald-600' },
                   { title: 'حاسبة الزكاة', desc: 'حساب النصاب تلقائياً بأسعار الذهب', link: '/zakat', color: 'border-emerald-600' },
-                  { title: 'مخطط الختمات', desc: 'خطط لختمتك الفردية أو العائلية', tab: 'khatmah', color: 'border-amber-500' },
-                  { title: 'مساعد سند AI', desc: 'محرك إجابات معزز بالمصادر والتخريج', tab: 'ai', color: 'border-[#0F382C]' }
+                  { title: 'مخطط الختمات', desc: 'خطط لختمتك الفردية أو العائلية', tab: 'khatmah', color: 'border-amber-500' }
                 ].map((m) => (
                   <div
                     key={m.title}
