@@ -11,6 +11,9 @@ import { FiqhComparison } from '@/components/FiqhComparison';
 import { SeerahTimeline } from '@/components/SeerahTimeline';
 import { MuslimTools } from '@/components/MuslimTools';
 import { KhatmahPlanner } from '@/components/KhatmahPlanner';
+import { IslamicRadio } from '@/components/IslamicRadio';
+import { HijriCalendar } from '@/components/HijriCalendar';
+import { NamesOfAllah } from '@/components/NamesOfAllah';
 
 import { Adhkar } from '@/components/Adhkar';
 import { ScholarsList } from '@/components/ScholarsList';
@@ -19,7 +22,7 @@ import { QiraatHub } from '@/components/QiraatHub';
 import { TafsirExplorer } from '@/components/TafsirExplorer';
 import { AuthManager } from '@/components/AuthManager';
 
-import { Search, BookOpen, HeartPulse, Compass, Sparkles, ShieldCheck, Play } from 'lucide-react';
+import { Search, BookOpen, HeartPulse, Compass, Sparkles, ShieldCheck, Play, Radio, Moon, Star } from 'lucide-react';
 import { UnifiedSearchResult } from '@/lib/types';
 
 export default function Home() {
@@ -103,7 +106,8 @@ export default function Home() {
               <div className="flex items-center gap-2 sm:gap-3 mt-5 sm:mt-6 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap sm:justify-center pb-1">
                 {[
                   { label: 'اقرأ القرآن', tab: 'quran', icon: BookOpen },
-                  { label: 'استمع للقرآن', tab: 'quran', icon: Play },
+                  { label: 'راديو القرآن', tab: 'radio', icon: Radio },
+                  { label: 'التقويم الهجري', tab: 'calendar', icon: Moon },
                   { label: 'أذكار اليوم', tab: 'adhkar', icon: HeartPulse },
                   { label: 'مواقيت الصلاة', tab: 'tools', icon: Compass }
                 ].map((action) => {
@@ -202,6 +206,9 @@ export default function Home() {
                 {[
                   { title: 'القرآن والقراءات', desc: '114 سورة بالروايات المتواترة والتفاسير', tab: 'quran', color: 'border-[#0F382C]' },
                   { title: 'الحديث الشريف', desc: 'أمهات الكتب التسعة بالسند والدليل', tab: 'hadith', color: 'border-[#C5A059]' },
+                  { title: 'الراديو الإسلامي', desc: 'بث مباشر لإذاعات القرآن والفتاوى', tab: 'radio', color: 'border-blue-500' },
+                  { title: 'التقويم الهجري', desc: 'تاريخ اليوم والمناسبات الإسلامية', tab: 'calendar', color: 'border-indigo-500' },
+                  { title: 'أسماء الله الحسنى', desc: '99 اسماً بمعانيها وفضلها', tab: 'names', color: 'border-rose-500' },
                   { title: 'الفقه المقارن', desc: 'مقارنة المذاهب الأربعة مع أدلتها', tab: 'fiqh', color: 'border-purple-600' },
                   { title: 'السيرة النبوية', desc: 'خط زمني تفاعلي لأحداث العصر النبوي', tab: 'seerah', color: 'border-blue-600' },
                   { title: 'أدوات المسلم', desc: 'مواقيت الصلاة، القبلة، والزكاة', tab: 'tools', color: 'border-emerald-600' },
@@ -236,6 +243,9 @@ export default function Home() {
         {activeTab === 'fiqh' && <FiqhComparison />}
         {activeTab === 'seerah' && <SeerahTimeline />}
         {activeTab === 'khatmah' && <div className="py-6 px-2"><KhatmahPlanner /></div>}
+        {activeTab === 'radio' && <IslamicRadio />}
+        {activeTab === 'calendar' && <HijriCalendar />}
+        {activeTab === 'names' && <NamesOfAllah />}
 
         {activeTab === 'scholars' && <ScholarsList />}
         {activeTab === 'tools' && <MuslimTools />}

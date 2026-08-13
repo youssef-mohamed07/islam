@@ -39,7 +39,9 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'adhkar', label: t.nav.adhkar },
     { id: 'fiqh', label: t.nav.fiqh },
     { id: 'seerah', label: t.nav.seerah },
-
+    { id: 'radio', label: 'الراديو' },
+    { id: 'calendar', label: 'التقويم' },
+    { id: 'names', label: 'أسماء الله' },
     { id: 'scholars', label: t.nav.scholars },
     { id: 'tools', label: t.nav.tools },
     { id: 'zakat', label: 'حاسبة الزكاة', link: '/zakat' },
@@ -53,7 +55,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Logo & Brand */}
           <div className="flex items-center space-x-2 sm:space-x-3 space-x-reverse cursor-pointer" onClick={() => setActiveTab('home')}>
             <div className="relative w-10 h-10 md:w-12 md:h-12 rounded-xl overflow-hidden shadow-md border border-[#C5A059]/30">
-              <Image src="/logo.jpg" alt="خير سند" fill className="object-cover" />
+              <Image src="/logo.jpg" alt="خير سند" fill sizes="(max-width: 768px) 100vw, 50px" className="object-cover" />
             </div>
             <div>
               <div className="flex items-center space-x-2 space-x-reverse">
