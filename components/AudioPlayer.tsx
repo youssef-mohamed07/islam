@@ -38,6 +38,12 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
   const [currentBlockRepeat, setCurrentBlockRepeat] = useState<number>(0);
   const [showMemSettings, setShowMemSettings] = useState(false);
 
+  // Drag State
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartPos = useRef({ x: 0, y: 0 });
+  const dragStartElementPos = useRef({ x: 0, y: 0 });
+
   const audio1Ref = useRef<HTMLAudioElement | null>(null);
   const audio2Ref = useRef<HTMLAudioElement | null>(null);
   const activePlayerIdRef = useRef<1 | 2>(1);
@@ -81,6 +87,61 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
       setMemEndAyah(Math.min(currentTrack.ayahNumber + 4, currentTrack.totalVerses || 286));
     }
   }, [currentTrack]);
+
+  // Drag functionality
+  const handleDragMove = React.useCallback((e: TouchEvent | MouseEvent) => {
+    if (!isDragging) return;
+    
+    // Prevent scrolling while dragging
+    if (e.cancelable) {
+      e.preventDefault();
+    }
+    
+    const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
+    
+    const deltaX = clientX - dragStartPos.current.x;
+    const deltaY = clientY - dragStartPos.current.y;
+    
+    setPosition({
+      x: dragStartElementPos.current.x + deltaX,
+      y: dragStartElementPos.current.y + deltaY
+    });
+  }, [isDragging]);
+
+  const handleDragEnd = React.useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('touchmove', handleDragMove, { passive: false });
+      window.addEventListener('touchend', handleDragEnd);
+      window.addEventListener('mousemove', handleDragMove);
+      window.addEventListener('mouseup', handleDragEnd);
+    }
+    return () => {
+      window.removeEventListener('touchmove', handleDragMove);
+      window.removeEventListener('touchend', handleDragEnd);
+      window.removeEventListener('mousemove', handleDragMove);
+      window.removeEventListener('mouseup', handleDragEnd);
+    };
+  }, [isDragging, handleDragMove, handleDragEnd]);
+
+  const handleDragStart = (e: React.TouchEvent | React.MouseEvent) => {
+    // Only allow drag from specific parts, exclude buttons/inputs
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('select') || target.closest('input')) {
+      return; 
+    }
+    
+    setIsDragging(true);
+    const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+    
+    dragStartPos.current = { x: clientX, y: clientY };
+    dragStartElementPos.current = { ...position };
+  };
 
   // Dual-Audio Engine Logic
   useEffect(() => {
@@ -255,8 +316,17 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
   if (!currentTrack) return null;
 
   return (
-    <div className="fixed bottom-[95px] lg:bottom-0 left-2 right-2 lg:left-0 lg:right-0 z-40 bg-[#0F382C] lg:rounded-none rounded-2xl text-[#FDFBF7] border border-[#C5A059]/30 lg:border-t lg:border-x-0 lg:border-b-0 shadow-2xl transition-all overflow-hidden flex flex-col">
+    <div 
+      className={`fixed bottom-[95px] lg:bottom-0 left-2 right-2 lg:left-0 lg:right-0 z-40 bg-[#0F382C] lg:rounded-none rounded-2xl text-[#FDFBF7] border border-[#C5A059]/30 lg:border-t lg:border-x-0 lg:border-b-0 shadow-2xl overflow-hidden flex flex-col cursor-grab active:cursor-grabbing touch-none ${isDragging ? '' : 'transition-all'}`}
+      style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
+      onMouseDown={handleDragStart}
+      onTouchStart={handleDragStart}
+    >
       
+      {/* Drag Handle (Mobile only visibility hint) */}
+      <div className="w-full flex justify-center pt-1.5 pb-0.5 lg:hidden">
+        <div className="w-10 h-1 bg-[#C5A059]/40 rounded-full"></div>
+      </div>
       {/* Dual Audio Engine */}
       <audio
         ref={audio1Ref}
