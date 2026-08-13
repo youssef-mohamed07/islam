@@ -49,15 +49,28 @@ export const QuranStudio: React.FC<QuranStudioProps> = ({ onPlayAudio }) => {
       .catch((err) => console.warn('Using default surahs list:', err));
   }, []);
 
-  // Fetch all verses when selectedSurah changes
+  // Client-side Caching Ref
+  const versesCacheRef = useRef<Map<number, any[]>>(new Map());
+  const tafsirCacheRef = useRef<Map<string, Record<string, string>>>(new Map());
+
+  // Fetch all verses when selectedSurah changes (Cache-First)
   useEffect(() => {
     if (!selectedSurah) return;
     setPopoverAyahKey(null);
+
+    // Check client-side memory cache
+    if (versesCacheRef.current.has(selectedSurah.id)) {
+      setVerses(versesCacheRef.current.get(selectedSurah.id)!);
+      setIsLoadingVerses(false);
+      return;
+    }
+
     setIsLoadingVerses(true);
     fetch(`/api/quran/verses/${selectedSurah.id}`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
+          versesCacheRef.current.set(selectedSurah.id, data);
           setVerses(data);
         }
       })
@@ -69,7 +82,7 @@ export const QuranStudio: React.FC<QuranStudioProps> = ({ onPlayAudio }) => {
       });
   }, [selectedSurah]);
 
-  // Fetch all tafsirs for the chapter when selectedTafsir or selectedSurah changes
+  // Fetch all tafsirs for the chapter when selectedTafsir or selectedSurah changes (Cache-First)
   useEffect(() => {
     if (!selectedSurah || selectedTafsir === 'none') {
       setTafsirsDict({});
@@ -77,6 +90,14 @@ export const QuranStudio: React.FC<QuranStudioProps> = ({ onPlayAudio }) => {
     }
     
     const slug = selectedTafsir === 'saadi' ? 'ar-tafseer-al-saddi' : 'ar-tafsir-ibn-kathir';
+    const cacheKey = `${selectedSurah.id}-${slug}`;
+
+    if (tafsirCacheRef.current.has(cacheKey)) {
+      setTafsirsDict(tafsirCacheRef.current.get(cacheKey)!);
+      setIsLoadingTafsir(false);
+      return;
+    }
+
     setIsLoadingTafsir(true);
     
     fetch(`/api/quran/tafsir/${slug}/by_chapter/${selectedSurah.id}`)
@@ -87,6 +108,7 @@ export const QuranStudio: React.FC<QuranStudioProps> = ({ onPlayAudio }) => {
           data.forEach((item: any) => {
             dict[item.verse_key] = item.text;
           });
+          tafsirCacheRef.current.set(cacheKey, dict);
           setTafsirsDict(dict);
         }
       })

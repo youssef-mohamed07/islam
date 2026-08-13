@@ -13,5 +13,10 @@ export async function GET(
   }
 
   const verses = await fetchQuranVersesFromApi(surahId);
-  return NextResponse.json(verses);
+
+  return NextResponse.json(verses, {
+    headers: {
+      'Cache-Control': 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400'
+    }
+  });
 }

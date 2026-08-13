@@ -8,7 +8,7 @@ export async function GET(
 
   try {
     const res = await fetch(`https://api.qurancdn.com/api/v4/tafsirs/${tafsirSlug}/by_chapter/${chapterId}`, {
-      cache: 'force-cache'
+      next: { revalidate: 86400 }
     });
     
     if (!res.ok) {
@@ -16,7 +16,11 @@ export async function GET(
     }
 
     const data = await res.json();
-    return NextResponse.json(data.tafsirs || []);
+    return NextResponse.json(data.tafsirs || [], {
+      headers: {
+        'Cache-Control': 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400'
+      }
+    });
   } catch (error) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
