@@ -314,6 +314,9 @@ export const MuslimTools: React.FC = () => {
                   <p className="text-sm text-emerald-800 dark:text-emerald-200 text-center font-bold">
                     نحتاج إلى إذن استخدام بوصلة الهاتف لتحديد الاتجاه تلقائياً
                   </p>
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 text-center px-4">
+                    ملاحظة: تتطلب هذه الميزة اتصالاً آمناً (HTTPS) لتعمل على الهواتف.
+                  </p>
                   <button 
                     onClick={requestCompassPermission}
                     className="bg-gradient-to-r from-[#0F382C] to-[#164E3D] text-white px-8 py-3.5 rounded-xl text-sm font-bold shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all"
@@ -325,7 +328,10 @@ export const MuslimTools: React.FC = () => {
                   )}
                 </div>
               ) : (
-                <div className="relative w-64 h-64 sm:w-72 sm:h-72 mx-auto mb-10 flex items-center justify-center mt-10">
+                <div 
+                  className="relative mx-auto mb-12 flex items-center justify-center mt-12"
+                  style={{ width: '280px', height: '280px', minHeight: '280px' }}
+                >
                   {/* The Rotating Compass Wheel */}
                   <div 
                     className="absolute inset-0 rounded-full border-2 border-emerald-900/10 dark:border-emerald-700/30 shadow-[0_10px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4)] flex items-center justify-center bg-white dark:bg-[#0D1412] transition-transform duration-300 ease-out"
@@ -355,9 +361,9 @@ export const MuslimTools: React.FC = () => {
                     >
                        <div className="w-12 h-1/2 relative flex flex-col items-center justify-start z-20">
                           {/* Kaaba Icon at the tip */}
-                          <div className="w-10 h-10 mt-3 bg-[#111] border-2 border-[#C5A059] rounded flex flex-col items-center justify-center shadow-[0_0_15px_rgba(197,160,89,0.5)] relative z-20 overflow-hidden">
-                            <div className="w-full h-2 bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-600 mb-1"></div>
-                            <div className="w-3 h-3 border-t-2 border-r-2 border-[#C5A059]/80 rounded-tr-sm"></div>
+                          <div className="w-12 h-12 mt-3 bg-[#111] border-[3px] border-[#C5A059] rounded flex flex-col items-center justify-center shadow-[0_0_20px_rgba(197,160,89,0.5)] relative z-20 overflow-hidden">
+                            <div className="w-full h-2.5 bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-600 mb-1"></div>
+                            <div className="w-4 h-4 border-t-2 border-r-2 border-[#C5A059]/80 rounded-tr-sm"></div>
                           </div>
                           
                           {/* Golden Line to center */}
@@ -372,9 +378,9 @@ export const MuslimTools: React.FC = () => {
                   </div>
                   
                   {/* Fixed Phone Indicator overlaid on top (points straight up) */}
-                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 flex flex-col items-center z-40">
-                     <div className="w-0 h-0 border-l-[12px] border-l-transparent border-r-[12px] border-r-transparent border-b-[20px] border-b-blue-500 drop-shadow-lg"></div>
-                     <div className="mt-1 bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md">اتجاه الهاتف</div>
+                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 flex flex-col items-center z-40">
+                     <div className="w-0 h-0 border-l-[14px] border-l-transparent border-r-[14px] border-r-transparent border-b-[24px] border-b-blue-500 drop-shadow-lg"></div>
+                     <div className="mt-1 bg-blue-500 text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-md whitespace-nowrap">اتجاه الهاتف</div>
                   </div>
                 </div>
               )}
