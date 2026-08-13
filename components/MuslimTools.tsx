@@ -309,55 +309,73 @@ export const MuslimTools: React.FC = () => {
               </p>
 
               {compassPermission !== 'granted' ? (
-                <div className="flex flex-col items-center justify-center space-y-4 mb-8 p-6 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-100 dark:border-emerald-800">
-                  <Compass className="w-12 h-12 text-[#C5A059] animate-pulse" />
+                <div className="flex flex-col items-center justify-center space-y-4 mb-8 p-6 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl border border-emerald-100 dark:border-emerald-800">
+                  <Compass className="w-16 h-16 text-[#C5A059] animate-pulse drop-shadow-lg" />
                   <p className="text-sm text-emerald-800 dark:text-emerald-200 text-center font-bold">
                     نحتاج إلى إذن استخدام بوصلة الهاتف لتحديد الاتجاه تلقائياً
                   </p>
                   <button 
                     onClick={requestCompassPermission}
-                    className="bg-[#0F382C] text-white px-6 py-3 rounded-xl text-sm font-bold shadow-md hover:bg-[#164E3D] transition-colors"
+                    className="bg-gradient-to-r from-[#0F382C] to-[#164E3D] text-white px-8 py-3.5 rounded-xl text-sm font-bold shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all"
                   >
                     تفعيل البوصلة الذكية
                   </button>
                   {compassPermission === 'denied' && (
-                    <p className="text-xs text-red-500">تم رفض الإذن. يرجى تفعيله من إعدادات المتصفح أو إعادة تحميل الصفحة.</p>
+                    <p className="text-xs text-red-500 font-bold bg-red-50 dark:bg-red-900/30 p-2 rounded-lg">تم رفض الإذن. يرجى تفعيله من إعدادات المتصفح أو إعادة تحميل الصفحة.</p>
                   )}
                 </div>
               ) : (
-                <div className="relative w-64 h-64 mx-auto mb-8 flex items-center justify-center mt-8">
+                <div className="relative w-64 h-64 sm:w-72 sm:h-72 mx-auto mb-10 flex items-center justify-center mt-10">
                   {/* The Rotating Compass Wheel */}
                   <div 
-                    className="absolute inset-0 rounded-full border-[6px] border-gray-100 dark:border-gray-800 shadow-inner transition-transform duration-300 ease-out flex items-center justify-center bg-gray-50 dark:bg-[#0D1412]"
+                    className="absolute inset-0 rounded-full border-2 border-emerald-900/10 dark:border-emerald-700/30 shadow-[0_10px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4)] flex items-center justify-center bg-white dark:bg-[#0D1412] transition-transform duration-300 ease-out"
                     style={{ transform: `rotate(${heading !== null ? -heading : 0}deg)` }}
                   >
-                    {/* North/South/East/West Markers */}
-                    <div className="absolute top-2 text-lg font-bold text-red-500">N</div>
-                    <div className="absolute bottom-2 text-sm font-bold text-gray-400">S</div>
-                    <div className="absolute right-2 text-sm font-bold text-gray-400">E</div>
-                    <div className="absolute left-2 text-sm font-bold text-gray-400">W</div>
+                    {/* Tick marks around the compass */}
+                    {Array.from({ length: 72 }).map((_, i) => (
+                      <div 
+                        key={i} 
+                        className="absolute w-full h-full flex justify-center items-start" 
+                        style={{ transform: `rotate(${i * 5}deg)` }}
+                      >
+                        <div className={`w-[2px] ${i % 18 === 0 ? 'h-3 bg-[#C5A059]' : (i % 9 === 0 ? 'h-2 bg-gray-400' : 'h-1 bg-gray-200 dark:bg-gray-800')} rounded-full mt-1.5`}></div>
+                      </div>
+                    ))}
 
-                    {/* Compass Center Dot */}
-                    <div className="w-3 h-3 bg-[#0F382C] dark:bg-[#C5A059] rounded-full absolute z-10 shadow-sm"></div>
+                    {/* North/South/East/West Markers */}
+                    <div className="absolute top-5 text-xl font-bold text-red-500 font-mono drop-shadow-md">N</div>
+                    <div className="absolute bottom-5 text-sm font-bold text-gray-400 font-mono">S</div>
+                    <div className="absolute right-5 text-sm font-bold text-gray-400 font-mono">E</div>
+                    <div className="absolute left-5 text-sm font-bold text-gray-400 font-mono">W</div>
 
                     {/* Qibla Indicator Needle */}
                     <div 
-                      className="absolute inset-0 flex items-center justify-center"
+                      className="absolute w-full h-full flex justify-center items-start"
                       style={{ transform: `rotate(${qiblaDirection}deg)` }}
                     >
-                       <div className="w-1.5 h-full py-4 relative">
-                          <div className="w-full h-1/2 bg-gradient-to-t from-[#C5A059] to-amber-300 rounded-t-full shadow-lg"></div>
+                       <div className="w-12 h-1/2 relative flex flex-col items-center justify-start z-20">
                           {/* Kaaba Icon at the tip */}
-                          <div className="absolute top-[-10px] left-1/2 -translate-x-1/2 w-8 h-8 bg-[#0F382C] border-2 border-[#C5A059] rounded flex flex-col items-center justify-center shadow-lg overflow-hidden">
-                            <div className="w-full h-2 bg-yellow-600/80 mb-1"></div>
-                            <div className="w-3 h-3 border-t-2 border-r-2 border-yellow-600/80"></div>
+                          <div className="w-10 h-10 mt-3 bg-[#111] border-2 border-[#C5A059] rounded flex flex-col items-center justify-center shadow-[0_0_15px_rgba(197,160,89,0.5)] relative z-20 overflow-hidden">
+                            <div className="w-full h-2 bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-600 mb-1"></div>
+                            <div className="w-3 h-3 border-t-2 border-r-2 border-[#C5A059]/80 rounded-tr-sm"></div>
                           </div>
+                          
+                          {/* Golden Line to center */}
+                          <div className="w-1.5 flex-1 bg-gradient-to-t from-transparent via-[#C5A059] to-[#C5A059] rounded-full -mt-2 shadow-sm z-10"></div>
                        </div>
                     </div>
                   </div>
                   
+                  {/* Compass Center Dot */}
+                  <div className="w-8 h-8 bg-[#162621] border-[3px] border-[#C5A059] rounded-full absolute z-30 shadow-lg flex items-center justify-center">
+                    <div className="w-2 h-2 bg-[#C5A059] rounded-full shadow-inner"></div>
+                  </div>
+                  
                   {/* Fixed Phone Indicator overlaid on top (points straight up) */}
-                  <div className="absolute -top-4 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-b-[15px] border-b-blue-500 z-20"></div>
+                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 flex flex-col items-center z-40">
+                     <div className="w-0 h-0 border-l-[12px] border-l-transparent border-r-[12px] border-r-transparent border-b-[20px] border-b-blue-500 drop-shadow-lg"></div>
+                     <div className="mt-1 bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md">اتجاه الهاتف</div>
+                  </div>
                 </div>
               )}
 
