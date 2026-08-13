@@ -345,10 +345,20 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
                   {isMemMode ? 'وضع التحفيظ الذكي' : (currentTrack.playMode === 'surah' ? 'تلاوة متواصلة (تلقائي)' : 'تلاوة آية')}
                 </span>
               </div>
-              <p className="text-xs text-emerald-200/80 truncate flex items-center gap-2">
-                القارئ المختار: {MOCK_RECITERS.find(r => reciterFolders[r.id] === selectedReciterKey)?.nameArabic || 'الشيخ المنشاوي'}
-                {isMemMode && <span className="text-[10px] bg-emerald-900/50 px-1.5 py-0.5 rounded">تكرار الآية: {currentAyahRepeat+1}/{ayahRepeatCount}</span>}
-              </p>
+              <div className="text-xs text-emerald-200/80 flex items-center gap-2">
+                <select
+                  value={selectedReciterKey}
+                  onChange={(e) => setSelectedReciterKey(e.target.value)}
+                  className="bg-transparent border-none p-0 text-emerald-200 focus:ring-0 cursor-pointer outline-none truncate max-w-[140px] sm:max-w-[200px] font-bold"
+                >
+                  {MOCK_RECITERS.map(r => (
+                    <option key={r.id} value={reciterFolders[r.id]} className="bg-emerald-950 text-white">
+                      {r.nameArabic}
+                    </option>
+                  ))}
+                </select>
+                {isMemMode && <span className="text-[10px] bg-emerald-900/50 px-1.5 py-0.5 rounded shrink-0">تكرار الآية: {currentAyahRepeat+1}/{ayahRepeatCount}</span>}
+              </div>
             </div>
           </div>
 
@@ -459,15 +469,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ currentTrack, onClose 
               {isMuted ? <VolumeX className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4" />}
             </button>
 
-            <select
-              value={selectedReciterKey}
-              onChange={(e) => setSelectedReciterKey(e.target.value)}
-              className="bg-emerald-950 border border-emerald-700/50 rounded-lg text-xs text-emerald-100 px-3 py-1.5 focus:outline-none focus:border-[#C5A059] max-w-[200px] truncate"
-            >
-              {MOCK_RECITERS.map(r => (
-                <option key={r.id} value={reciterFolders[r.id]}>{r.nameArabic}</option>
-              ))}
-            </select>
+
 
             <button
               onClick={onClose}

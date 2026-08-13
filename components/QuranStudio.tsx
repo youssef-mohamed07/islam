@@ -379,7 +379,6 @@ export const QuranStudio: React.FC<QuranStudioProps> = ({ onPlayAudio }) => {
                     </span>
                     <div>
                       <div className="text-sm font-bold">{surah.nameArabic}</div>
-                      <div className="text-[10px] opacity-75">{surah.nameEnglish}</div>
                     </div>
                   </div>
                   <div className="text-left text-[10px] opacity-75">
@@ -645,7 +644,6 @@ export const QuranStudio: React.FC<QuranStudioProps> = ({ onPlayAudio }) => {
         items={surahsList.map((surah) => ({
           id: String(surah.id),
           label: `${surah.id}. سورة ${surah.nameArabic}`,
-          sublabel: surah.nameEnglish,
           trailing: `${surah.versesCount} آية`,
         }))}
         onSelect={(id) => {

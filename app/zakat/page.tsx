@@ -47,8 +47,6 @@ export default function ZakatCalculator() {
       <Header 
         activeTab="zakat"
         setActiveTab={() => window.location.href = '/'}
-        lang="ar"
-        setLang={() => {}}
         openSearchModal={() => {}}
       />
       

@@ -25,7 +25,6 @@ import { UnifiedSearchResult } from '@/lib/types';
 export default function Home() {
   const [activeTab, setActiveTab] = useState('home');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [lang, setLang] = useState<'ar' | 'en'>('ar');
   const [audioTrack, setAudioTrack] = useState<{ surahId: number; surahName: string; ayahNumber: number; reciterName: string; playMode?: 'verse' | 'surah'; totalVerses?: number } | null>(null);
 
   const handlePlayAudio = (surahId: number, surahName: string, ayahNumber: number, playMode: 'verse' | 'surah' = 'verse', totalVerses?: number) => {
@@ -55,8 +54,6 @@ export default function Home() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         openSearchModal={() => setIsSearchOpen(true)}
-        lang={lang}
-        setLang={setLang}
       />
 
       {/* Global Search Modal */}

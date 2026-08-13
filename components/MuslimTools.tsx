@@ -20,9 +20,58 @@ export const MuslimTools: React.FC = () => {
   const [prayerTimes, setPrayerTimes] = useState<{ [key: string]: string }>({});
   const [hijriDate, setHijriDate] = useState('');
   const [qiblaDirection, setQiblaDirection] = useState<number>(136); // default Cairo
+  const [heading, setHeading] = useState<number | null>(null);
+  const [compassPermission, setCompassPermission] = useState<'prompt' | 'granted' | 'denied'>('prompt');
   const [nextPrayerName, setNextPrayerName] = useState('');
   const [countdownString, setCountdownString] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+
+  const handleOrientation = React.useCallback((event: any) => {
+    let compass = null;
+    if (event.webkitCompassHeading) {
+      compass = event.webkitCompassHeading;
+    } else if (event.absolute && event.alpha !== null) {
+      compass = 360 - event.alpha;
+    } else if (event.alpha !== null) {
+      compass = 360 - event.alpha;
+    }
+    
+    if (compass !== null) {
+      setHeading(compass);
+    }
+  }, []);
+
+  const requestCompassPermission = async () => {
+    if (typeof window !== 'undefined') {
+      if (typeof (DeviceOrientationEvent as any) !== 'undefined' && typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+        try {
+          const permission = await (DeviceOrientationEvent as any).requestPermission();
+          if (permission === 'granted') {
+            setCompassPermission('granted');
+            window.addEventListener('deviceorientation', handleOrientation, true);
+          } else {
+            setCompassPermission('denied');
+          }
+        } catch (error) {
+          console.error('Compass permission error:', error);
+          setCompassPermission('denied');
+        }
+      } else {
+        setCompassPermission('granted');
+        window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+        window.addEventListener('deviceorientation', handleOrientation, true);
+      }
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('deviceorientation', handleOrientation, true);
+        window.removeEventListener('deviceorientationabsolute', handleOrientation, true);
+      }
+    };
+  }, [handleOrientation]);
 
   // Ask for location and fetch data
   useEffect(() => {
@@ -251,34 +300,94 @@ export const MuslimTools: React.FC = () => {
 
           {/* Tool View 2: Qibla Direction */}
           {activeTool === 'qibla' && (
-            <div className="bg-white dark:bg-[#162621] p-8 rounded-2xl shadow-soft border border-gray-200/80 dark:border-gray-800 text-center max-w-xl mx-auto relative overflow-hidden">
-              <div className="relative w-48 h-48 mx-auto mb-8 border-4 border-[#C5A059]/20 rounded-full flex items-center justify-center">
-                {/* Compass background */}
-                <div className="absolute inset-0 rounded-full border-2 border-dashed border-gray-200 dark:border-gray-700"></div>
-                {/* North indicator */}
-                <div className="absolute top-2 text-xs font-bold text-gray-400">N</div>
-                {/* Needle pointing to Qibla */}
-                <div 
-                  className="absolute w-2 h-24 bg-gradient-to-t from-transparent to-[#C5A059] transform origin-bottom transition-transform duration-1000"
-                  style={{ transform: `rotate(${qiblaDirection}deg) translateY(-50%)` }}
-                >
-                  <div className="w-4 h-4 bg-[#C5A059] rounded-full absolute -top-2 -left-1 shadow-lg border-2 border-white"></div>
-                </div>
-                <Compass className="w-10 h-10 text-gray-300 dark:text-gray-600 absolute" />
-              </div>
-              
+            <div className="bg-white dark:bg-[#162621] p-6 sm:p-8 rounded-2xl shadow-soft border border-gray-200/80 dark:border-gray-800 text-center max-w-xl mx-auto relative overflow-hidden">
               <h2 className="text-2xl font-bold text-[#0F382C] dark:text-white mb-2">
                 اتجاه القبلة الشريفة
               </h2>
-              <p className="text-sm text-gray-500 mb-2">
-                تم حسابه بناءً على: {locationName}
+              <p className="text-sm text-gray-500 mb-6">
+                بناءً على: {locationName}
               </p>
-              <p className="text-lg font-mono font-bold text-[#C5A059] mb-6">
-                {qiblaDirection.toFixed(2)}° درجة
-              </p>
-              <div className="bg-emerald-50 dark:bg-emerald-950/40 text-[#0F382C] dark:text-[#C5A059] p-4 rounded-xl font-bold text-xs border border-emerald-200 dark:border-emerald-800">
-                <p>وجه هاتفك نحو الشمال الحقيقي أولاً، ثم در بالزاوية الموضحة أعلاه ليصبح اتجاهك نحو الكعبة المشرفة.</p>
+
+              {compassPermission !== 'granted' ? (
+                <div className="flex flex-col items-center justify-center space-y-4 mb-8 p-6 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-100 dark:border-emerald-800">
+                  <Compass className="w-12 h-12 text-[#C5A059] animate-pulse" />
+                  <p className="text-sm text-emerald-800 dark:text-emerald-200 text-center font-bold">
+                    نحتاج إلى إذن استخدام بوصلة الهاتف لتحديد الاتجاه تلقائياً
+                  </p>
+                  <button 
+                    onClick={requestCompassPermission}
+                    className="bg-[#0F382C] text-white px-6 py-3 rounded-xl text-sm font-bold shadow-md hover:bg-[#164E3D] transition-colors"
+                  >
+                    تفعيل البوصلة الذكية
+                  </button>
+                  {compassPermission === 'denied' && (
+                    <p className="text-xs text-red-500">تم رفض الإذن. يرجى تفعيله من إعدادات المتصفح أو إعادة تحميل الصفحة.</p>
+                  )}
+                </div>
+              ) : (
+                <div className="relative w-64 h-64 mx-auto mb-8 flex items-center justify-center mt-8">
+                  {/* The Rotating Compass Wheel */}
+                  <div 
+                    className="absolute inset-0 rounded-full border-[6px] border-gray-100 dark:border-gray-800 shadow-inner transition-transform duration-300 ease-out flex items-center justify-center bg-gray-50 dark:bg-[#0D1412]"
+                    style={{ transform: `rotate(${heading !== null ? -heading : 0}deg)` }}
+                  >
+                    {/* North/South/East/West Markers */}
+                    <div className="absolute top-2 text-lg font-bold text-red-500">N</div>
+                    <div className="absolute bottom-2 text-sm font-bold text-gray-400">S</div>
+                    <div className="absolute right-2 text-sm font-bold text-gray-400">E</div>
+                    <div className="absolute left-2 text-sm font-bold text-gray-400">W</div>
+
+                    {/* Compass Center Dot */}
+                    <div className="w-3 h-3 bg-[#0F382C] dark:bg-[#C5A059] rounded-full absolute z-10 shadow-sm"></div>
+
+                    {/* Qibla Indicator Needle */}
+                    <div 
+                      className="absolute inset-0 flex items-center justify-center"
+                      style={{ transform: `rotate(${qiblaDirection}deg)` }}
+                    >
+                       <div className="w-1.5 h-full py-4 relative">
+                          <div className="w-full h-1/2 bg-gradient-to-t from-[#C5A059] to-amber-300 rounded-t-full shadow-lg"></div>
+                          {/* Kaaba Icon at the tip */}
+                          <div className="absolute top-[-10px] left-1/2 -translate-x-1/2 w-8 h-8 bg-[#0F382C] border-2 border-[#C5A059] rounded flex flex-col items-center justify-center shadow-lg overflow-hidden">
+                            <div className="w-full h-2 bg-yellow-600/80 mb-1"></div>
+                            <div className="w-3 h-3 border-t-2 border-r-2 border-yellow-600/80"></div>
+                          </div>
+                       </div>
+                    </div>
+                  </div>
+                  
+                  {/* Fixed Phone Indicator overlaid on top (points straight up) */}
+                  <div className="absolute -top-4 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-b-[15px] border-b-blue-500 z-20"></div>
+                </div>
+              )}
+
+              <div className="flex justify-center items-center gap-8 mt-4 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-2xl border border-gray-100 dark:border-gray-800">
+                <div className="text-center">
+                  <p className="text-xs text-gray-500 mb-1">زاوية القبلة</p>
+                  <p className="text-xl font-mono font-bold text-[#C5A059]">{qiblaDirection.toFixed(0)}°</p>
+                </div>
+                {heading !== null && (
+                  <div className="text-center border-r border-gray-200 dark:border-gray-700 pr-8">
+                    <p className="text-xs text-gray-500 mb-1">اتجاه هاتفك</p>
+                    <p className="text-xl font-mono font-bold text-blue-500">{heading.toFixed(0)}°</p>
+                  </div>
+                )}
               </div>
+              
+              {heading !== null && (
+                 (() => {
+                   let diff = Math.abs(heading - qiblaDirection) % 360;
+                   let distance = diff > 180 ? 360 - diff : diff;
+                   if (distance < 10) {
+                     return (
+                       <div className="mt-6 bg-emerald-500 text-white p-4 rounded-xl font-bold animate-pulse shadow-lg shadow-emerald-500/20">
+                         أنت الآن تواجه القبلة! تقبل الله صلاتك.
+                       </div>
+                     );
+                   }
+                   return null;
+                 })()
+              )}
             </div>
           )}
 

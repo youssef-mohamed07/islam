@@ -2,27 +2,23 @@
 
 import React, { useState } from 'react';
 import { Search, BookOpen, Moon, Sun, Globe, User, Sparkles, Compass, ShieldCheck, Menu, X } from 'lucide-react';
-import { ar, en } from '@/lib/i18n';
+import { ar } from '@/lib/i18n';
 
 interface HeaderProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   openSearchModal: () => void;
-  lang: 'ar' | 'en';
-  setLang: (lang: 'ar' | 'en') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   activeTab,
   setActiveTab,
   openSearchModal,
-  lang,
-  setLang,
 }) => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const t = lang === 'ar' ? ar : en;
+  const t = ar;
 
   const toggleDarkMode = () => {
     setIsDarkMode(!isDarkMode);

@@ -29,33 +29,3 @@ export const ar = {
   }
 };
 
-export const en = {
-  brand: {
-    name: "Sanad",
-    tagline: "Everything you need from Quran, Sunnah, and Islamic Knowledge in one place",
-    subtitle: "A digital Islamic encyclopedia bringing together Quran, Qira'at, Tafsir, Hadith, Books, and Adhkar.",
-    motto: "Every piece of knowledge has a source"
-  },
-  nav: {
-    home: "Home",
-    quran: "Holy Quran",
-    qiraat: "Qira'at & Riwayat",
-    tafsir: "Tafsir",
-    hadith: "Hadith Collections",
-    adhkar: "Adhkar & Duas",
-    fiqh: "Comparative Fiqh",
-    seerah: "Seerah & History",
-    library: "Islamic Library",
-    scholars: "Scholars & Biographies",
-    tools: "Muslim Tools",
-    search: "Unified Search",
-    sanadAi: "Sanad AI Assistant",
-    account: "My Account",
-    admin: "Admin Dashboard"
-  },
-  search: {
-    placeholder: "Search across Quran, Hadith, Tafsir, Library, and Fiqh...",
-    allResults: "All Results",
-    verifiedBadge: "Verified Source"
-  }
-};
