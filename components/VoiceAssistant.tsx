@@ -52,6 +52,9 @@ export const VoiceAssistant: React.FC = () => {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const ttsSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const ttsDoneRef = useRef<(() => void) | null>(null);
+  const ttsAbortRef = useRef<AbortController | null>(null);
+  const speakSessionRef = useRef(0);
+  const autoSpeakRef = useRef(true);
   const recognitionRef = useRef<any>(null);
   const finalTranscriptRef = useRef('');
   const recordingActiveRef = useRef(false);
@@ -242,13 +245,24 @@ export const VoiceAssistant: React.FC = () => {
 
       ttsDoneRef.current = resolve; // لو المستخدم وقف الصوت نفضّل أي انتظار معلّق
 
+      const token = ++speakSessionRef.current; // أي نطق جديد يلغي اللي قبله
+      const controller = new AbortController();
+      ttsAbortRef.current = controller;
+
       try {
         const res = await fetch('/api/tts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: speechCleaned }),
+          signal: controller.signal,
         });
         if (!res.ok) throw new Error('cloud TTS failed');
+
+        // قبل التشغيل: لو الصوت اتقفل أو بدأت جلسة نطق جديدة → ما نكملش
+        if (!autoSpeakRef.current || token !== speakSessionRef.current) {
+          ttsDoneRef.current = null;
+          return resolve();
+        }
 
         // نشغّل عبر AudioContext المفتوح من ضغطة المستخدم — بيتفادى منع التشغيل التلقائي
         const Ctor: any = (window as any).AudioContext || (window as any).webkitAudioContext;
@@ -278,13 +292,21 @@ export const VoiceAssistant: React.FC = () => {
         source.start();
       } catch {
         ttsDoneRef.current = null;
-        await browserSpeak(speechCleaned);
+        // لو الصوت مقفول أو الجلسة اتلغت → لا ننطق حتى صوت المتصفح
+        if (autoSpeakRef.current && token === speakSessionRef.current) {
+          await browserSpeak(speechCleaned);
+        }
         resolve();
       }
     });
   }, [browserSpeak]);
 
   const stopSpeaking = () => {
+    speakSessionRef.current++; // أي صوت جاي يتلغى
+    if (ttsAbortRef.current) {
+      ttsAbortRef.current.abort();
+      ttsAbortRef.current = null;
+    }
     stopAudioPlayback();
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
@@ -706,8 +728,15 @@ export const VoiceAssistant: React.FC = () => {
 
               <button
                 onClick={() => {
-                  if (isSpeaking) stopSpeaking();
-                  setAutoSpeak(!autoSpeak);
+                  if (autoSpeakRef.current) {
+                    // قفل الصوت: اسكت أي حاجة شغالة أو لسه جاية
+                    autoSpeakRef.current = false;
+                    setAutoSpeak(false);
+                    stopSpeaking();
+                  } else {
+                    autoSpeakRef.current = true;
+                    setAutoSpeak(true);
+                  }
                 }}
                 title={autoSpeak ? 'كتم الصوت' : 'تشغيل الصوت'}
                 className={`p-1.5 rounded-lg border transition-all ${

@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
           {
             role: 'system',
             content:
-              'Repeat the user message exactly as written aloud, in a warm, clear, natural Egyptian Arabic voice (لهجة مصرية هادية وواضحة). Do not add, translate, or change any words.',
+              'Repeat the user message exactly as written aloud, ONCE only, in a warm, clear, natural Egyptian Arabic voice (لهجة مصرية هادية وواضحة). Do not add, translate, repeat, or change any words.',
           },
           { role: 'user', content: cleaned },
         ],
