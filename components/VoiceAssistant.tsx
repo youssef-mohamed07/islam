@@ -49,6 +49,8 @@ export const VoiceAssistant: React.FC = () => {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const ttsSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const ttsDoneRef = useRef<(() => void) | null>(null);
   const recognitionRef = useRef<any>(null);
   const finalTranscriptRef = useRef('');
@@ -57,6 +59,8 @@ export const VoiceAssistant: React.FC = () => {
   const heardAnythingRef = useRef(false);
   const lastResultAtRef = useRef(0);
   const silenceWatcherRef = useRef<NodeJS.Timeout | null>(null);
+  const liveTranscriptRef = useRef('');
+  const sessionOpenRef = useRef(false);
 
   // Avoid SSR/CSR mismatch for the fixed overlay
   const [mounted, setMounted] = useState(false);
@@ -191,7 +195,34 @@ export const VoiceAssistant: React.FC = () => {
     });
   }, [loadVoices]);
 
+  // فتح قفل الصوت أثناء أي ضغطة للمستخدم عشان المتصفح ما يمنعش التشغيل بعدين
+  const unlockAudio = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const Ctor: any = (window as any).AudioContext || (window as any).webkitAudioContext;
+    if (!Ctor) return;
+    if (!audioCtxRef.current) {
+      try {
+        audioCtxRef.current = new Ctor();
+      } catch {
+        return;
+      }
+    }
+    const ctx = audioCtxRef.current;
+    if (!ctx) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+  }, []);
+
   const stopAudioPlayback = () => {
+    if (ttsSourceRef.current) {
+      try {
+        ttsSourceRef.current.stop();
+      } catch {
+        // تجاهل
+      }
+      ttsSourceRef.current = null;
+    }
     if (ttsAudioRef.current) {
       ttsAudioRef.current.pause();
       ttsAudioRef.current.src = '';
@@ -219,20 +250,32 @@ export const VoiceAssistant: React.FC = () => {
         });
         if (!res.ok) throw new Error('cloud TTS failed');
 
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        ttsAudioRef.current = audio;
+        // نشغّل عبر AudioContext المفتوح من ضغطة المستخدم — بيتفادى منع التشغيل التلقائي
+        const Ctor: any = (window as any).AudioContext || (window as any).webkitAudioContext;
+        if (!Ctor) throw new Error('no AudioContext');
+        if (!audioCtxRef.current) audioCtxRef.current = new Ctor();
+        const ctx = audioCtxRef.current as AudioContext | null;
+        if (!ctx) throw new Error('no AudioContext');
+        if (ctx.state === 'suspended') {
+          await ctx.resume().catch(() => {});
+        }
+
+        const arrayBuf = await res.arrayBuffer();
+        const audioBuf = await ctx.decodeAudioData(arrayBuf);
+        const source = ctx.createBufferSource();
+        source.buffer = audioBuf;
+        source.connect(ctx.destination);
+        ttsSourceRef.current = source;
+
         const finish = () => {
+          ttsSourceRef.current = null;
           ttsDoneRef.current = null;
           setIsSpeaking(false);
-          URL.revokeObjectURL(url);
           resolve();
         };
-        audio.onplay = () => setIsSpeaking(true);
-        audio.onended = finish;
-        audio.onerror = finish;
-        await audio.play();
+        source.onended = finish;
+        setIsSpeaking(true);
+        source.start();
       } catch {
         ttsDoneRef.current = null;
         await browserSpeak(speechCleaned);
@@ -254,8 +297,11 @@ export const VoiceAssistant: React.FC = () => {
     }
   };
 
-  // إيقاف كل محركات التسجيل (الميكروفون + التعرف اللحظي + مراقب السكوت)
-  const stopRecordingEngines = () => {
+  // إغلاق التسجيل بدون إرسال (عند إغلاق الشات مثلاً)
+  const abortRecording = () => {
+    sessionOpenRef.current = false;
+    recordingActiveRef.current = false;
+    setIsRecording(false);
     if (silenceWatcherRef.current) {
       clearInterval(silenceWatcherRef.current);
       silenceWatcherRef.current = null;
@@ -271,17 +317,47 @@ export const VoiceAssistant: React.FC = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     }
+    finalTranscriptRef.current = '';
+    liveTranscriptRef.current = '';
+    setLiveTranscript('');
+  };
+
+  // إنهاء الجلسة: يقفل الميكروفون ويخلي التعرف يسلّم النتيجة النهائية قبل الإرسال
+  const endRecordingSession = () => {
+    if (!recordingActiveRef.current) return;
+    recordingActiveRef.current = false;
+    setIsRecording(false);
+    if (silenceWatcherRef.current) {
+      clearInterval(silenceWatcherRef.current);
+      silenceWatcherRef.current = null;
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    if (recognitionRef.current) {
+      // stop() بتخلي كروم يسلّم النتيجة النهائية وبعدين onend بيبعت
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        recognitionRef.current = null;
+        sendHeardSpeech();
+      }
+    } else {
+      sendHeardSpeech();
+    }
   };
 
   // Start Voice Recording — بيكتب كلامك لحظة بلحظة ويبعته تلقائياً لما تخلص
   const startRecording = async () => {
     stopSpeaking();
+    unlockAudio();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
       finalTranscriptRef.current = '';
+      liveTranscriptRef.current = '';
       sentRef.current = false;
       heardAnythingRef.current = false;
       lastResultAtRef.current = Date.now();
@@ -323,6 +399,7 @@ export const VoiceAssistant: React.FC = () => {
             }
           }
           setLiveTranscript((finalTranscriptRef.current + interim).trim());
+          liveTranscriptRef.current = (finalTranscriptRef.current + interim).trim();
         };
 
         recognition.onerror = () => {
@@ -330,11 +407,18 @@ export const VoiceAssistant: React.FC = () => {
         };
 
         recognition.onend = () => {
-          // التعرف انتهى لوحده (سكوت) والمستخدم لسه مسجل → يبعث كلامه تلقائياً
-          if (recordingActiveRef.current) {
+          recognitionRef.current = null;
+          // الجلسة لسه مفتوحة (سكوت أو قفل من المتصفح) → نبعت اللي اتسمع
+          if (sessionOpenRef.current) {
             recordingActiveRef.current = false;
             setIsRecording(false);
-            stopRecordingEngines();
+            if (silenceWatcherRef.current) {
+              clearInterval(silenceWatcherRef.current);
+              silenceWatcherRef.current = null;
+            }
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+              mediaRecorderRef.current.stop();
+            }
             sendHeardSpeech();
           }
         };
@@ -347,6 +431,7 @@ export const VoiceAssistant: React.FC = () => {
       }
 
       recordingActiveRef.current = true;
+      sessionOpenRef.current = true;
       setIsRecording(true);
 
       // مراقب السكوت: لو المستخدم قال حاجة وسكت ~2 ثانية → يبعث كلامه تلقائياً
@@ -354,7 +439,7 @@ export const VoiceAssistant: React.FC = () => {
       silenceWatcherRef.current = setInterval(() => {
         if (!recordingActiveRef.current) return;
         if (heardAnythingRef.current && Date.now() - lastResultAtRef.current > 2000) {
-          stopRecording();
+          endRecordingSession();
         }
       }, 400);
     } catch (err) {
@@ -364,12 +449,14 @@ export const VoiceAssistant: React.FC = () => {
     }
   };
 
-  // إرسال الكلام المسموع — النص اللحظي أولاً، ولو مفيش نجرّب AssemblyAI على التسجيل
+  // إرسال الكلام المسموع — النهائي أولاً، ثم اللحظي، ولو مفيش نجرّب AssemblyAI على التسجيل
   const sendHeardSpeech = async () => {
     if (sentRef.current) return;
     sentRef.current = true;
-    const heard = finalTranscriptRef.current.trim();
+    sessionOpenRef.current = false;
+    const heard = (finalTranscriptRef.current.trim() || liveTranscriptRef.current.trim());
     finalTranscriptRef.current = '';
+    liveTranscriptRef.current = '';
     setLiveTranscript('');
 
     if (heard) {
@@ -393,11 +480,7 @@ export const VoiceAssistant: React.FC = () => {
 
   // Stop Voice Recording — زر الإرسال اليدوي
   const stopRecording = () => {
-    if (!recordingActiveRef.current) return;
-    recordingActiveRef.current = false;
-    setIsRecording(false);
-    stopRecordingEngines();
-    sendHeardSpeech();
+    endRecordingSession();
   };
 
   // Process Speech via AssemblyAI
@@ -527,6 +610,7 @@ export const VoiceAssistant: React.FC = () => {
   const handleTextSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim() || isProcessing) return;
+    unlockAudio();
     const q = inputText.trim();
     setInputText('');
     handleAssistantQuery(q);
@@ -544,7 +628,10 @@ export const VoiceAssistant: React.FC = () => {
       {/* 1. Floating Launch Button - round FAB above bottom nav (mobile) / corner (desktop) */}
       <div className="fixed bottom-20 left-4 lg:bottom-6 lg:left-6 z-40">
         <button
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={() => {
+            unlockAudio();
+            setIsOpen(!isOpen);
+          }}
           className={`relative w-14 h-14 rounded-full flex items-center justify-center shadow-[0_10px_30px_rgba(15,56,44,0.4)] border border-[#C5A059]/50 transition-all duration-300 transform hover:scale-105 active:scale-95 ${
             isOpen
               ? 'bg-gray-900 text-white dark:bg-gray-800'
@@ -635,7 +722,7 @@ export const VoiceAssistant: React.FC = () => {
               <button
                 onClick={() => {
                   stopSpeaking();
-                  stopRecording();
+                  abortRecording();
                   setIsOpen(false);
                 }}
                 className="p-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
@@ -678,7 +765,10 @@ export const VoiceAssistant: React.FC = () => {
                     ].map((item) => (
                       <button
                         key={item}
-                        onClick={() => handleAssistantQuery(item)}
+                        onClick={() => {
+                          unlockAudio();
+                          handleAssistantQuery(item);
+                        }}
                         className="text-right text-[11px] font-medium bg-white dark:bg-[#15231F] hover:bg-[#0F382C] hover:text-white dark:hover:bg-[#C5A059] dark:hover:text-gray-950 border border-gray-200/80 dark:border-gray-800 text-gray-700 dark:text-gray-200 px-3.5 py-2 rounded-xl shadow-xs transition-all"
                       >
                         {item}
