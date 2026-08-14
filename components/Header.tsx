@@ -7,7 +7,6 @@ import { usePathname } from 'next/navigation';
 import { Search, Moon, Sun, User, Menu, X } from 'lucide-react';
 import { ar } from '@/lib/i18n';
 import { useShell } from './AudioContext';
-import { VoiceAssistant } from './VoiceAssistant';
 
 export const Header: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -87,9 +86,6 @@ export const Header: React.FC = () => {
 
           {/* Desktop Right Action Controls */}
           <div className="hidden lg:flex items-center space-x-3 space-x-reverse">
-
-            {/* Voice assistant — mic docked with the header controls */}
-            <VoiceAssistant />
 
             {/* Dark Mode Toggle */}
             <button

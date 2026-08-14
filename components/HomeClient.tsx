@@ -176,22 +176,22 @@ export const HomeClient: React.FC = () => {
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
           {[
-            { title: 'القرآن والقراءات', desc: '114 سورة بالروايات المتواترة والتفاسير', href: '/quran', color: 'border-[#0F382C]' },
-            { title: 'الحديث الشريف', desc: 'أمهات الكتب التسعة بالسند والدليل', href: '/hadith', color: 'border-[#C5A059]' },
-            { title: 'الراديو الإسلامي', desc: 'بث مباشر لإذاعات القرآن والفتاوى', href: '/radio', color: 'border-blue-500' },
-            { title: 'التقويم الهجري', desc: 'تاريخ اليوم والمناسبات الإسلامية', href: '/calendar', color: 'border-indigo-500' },
-            { title: 'أسماء الله الحسنى', desc: '99 اسماً بمعانيها وفضلها', href: '/names', color: 'border-rose-500' },
-            { title: 'الفقه المقارن', desc: 'مقارنة المذاهب الأربعة مع أدلتها', href: '/fiqh', color: 'border-purple-600' },
-            { title: 'السيرة النبوية', desc: 'خط زمني تفاعلي لأحداث العصر النبوي', href: '/seerah', color: 'border-blue-600' },
-            { title: 'أدوات المسلم', desc: 'مواقيت الصلاة، القبلة، والزكاة', href: '/tools', color: 'border-emerald-600' },
-            { title: 'الزكاة والصدقة', desc: 'زكاة المال والفطر وأنواع الصدقة', href: '/zakat', color: 'border-emerald-600' },
+            { title: 'القرآن والقراءات', desc: '114 سورة بالروايات المتواترة والتفاسير', href: '/quran' },
+            { title: 'الحديث الشريف', desc: 'أمهات الكتب التسعة بالسند والدليل', href: '/hadith' },
+            { title: 'الراديو الإسلامي', desc: 'بث مباشر لإذاعات القرآن والفتاوى', href: '/radio' },
+            { title: 'التقويم الهجري', desc: 'تاريخ اليوم والمناسبات الإسلامية', href: '/calendar' },
+            { title: 'أسماء الله الحسنى', desc: '99 اسماً بمعانيها وفضلها', href: '/names' },
+            { title: 'الفقه المقارن', desc: 'مقارنة المذاهب الأربعة مع أدلتها', href: '/fiqh' },
+            { title: 'السيرة النبوية', desc: 'خط زمني تفاعلي لأحداث العصر النبوي', href: '/seerah' },
+            { title: 'أدوات المسلم', desc: 'مواقيت الصلاة، القبلة، والزكاة', href: '/tools' },
+            { title: 'الزكاة والصدقة', desc: 'زكاة المال والفطر وأنواع الصدقة', href: '/zakat' },
           ].map((m) => (
             <Link
               key={m.title}
               href={m.href}
-              className={`bg-white dark:bg-[#162621] p-4 sm:p-6 rounded-2xl shadow-soft border-t-4 ${m.color} border-x border-b border-gray-200/80 dark:border-gray-800 hover:shadow-card cursor-pointer transition-all sm:hover:scale-105 active:scale-[0.98]`}
+              className="bg-white dark:bg-[#162621] p-4 sm:p-6 rounded-2xl shadow-soft border border-gray-200/80 dark:border-gray-800 hover:border-[#C5A059]/60 dark:hover:border-[#C5A059]/40 hover:shadow-card cursor-pointer transition-all sm:hover:-translate-y-1 active:scale-[0.98] group"
             >
-              <h3 className="font-extrabold text-sm sm:text-lg text-[#0F382C] dark:text-white mb-1.5 sm:mb-2">
+              <h3 className="font-extrabold text-sm sm:text-lg text-[#0F382C] dark:text-white group-hover:text-[#C5A059] transition-colors mb-1.5 sm:mb-2">
                 {m.title}
               </h3>
               <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 leading-relaxed">

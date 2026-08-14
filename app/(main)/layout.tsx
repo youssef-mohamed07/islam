@@ -6,6 +6,7 @@ import { Header } from '@/components/Header';
 import { MobileNav } from '@/components/MobileNav';
 import { SearchModal } from '@/components/SearchModal';
 import { AudioPlayer } from '@/components/AudioPlayer';
+import { VoiceAssistant } from '@/components/VoiceAssistant';
 
 function Shell({ children }: { children: React.ReactNode }) {
   const { currentTrack, closeAudio, isSearchOpen, closeSearch } = useShell();
@@ -47,6 +48,9 @@ function Shell({ children }: { children: React.ReactNode }) {
 
       {/* Sticky Audio Player Bar */}
       <AudioPlayer currentTrack={currentTrack} onClose={closeAudio} />
+
+      {/* Floating Chatbot Widget */}
+      <VoiceAssistant />
 
       {/* Mobile Bottom Navigation */}
       <MobileNav />
