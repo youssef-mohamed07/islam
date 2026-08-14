@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Search, X, ShieldCheck, Filter } from 'lucide-react';
 import { SanadSearchEngine } from '@/lib/searchEngine';
 import { UnifiedSearchResult } from '@/lib/types';
@@ -9,10 +10,10 @@ import { MOCK_AYAH_SAMPLE, MOCK_HADITHS, MOCK_FIQH_RULINGS, MOCK_SEERAH_EVENTS, 
 interface SearchModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelectResult: (result: UnifiedSearchResult) => void;
 }
 
-export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSelectResult }) => {
+export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => {
+  const router = useRouter();
   const [query, setQuery] = useState('الصبر');
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [results, setResults] = useState<UnifiedSearchResult[]>([]);
@@ -174,7 +175,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onSel
               <div
                 key={result.id}
                 onClick={() => {
-                  onSelectResult(result);
+                  if (result.url) router.push(result.url);
                   onClose();
                 }}
                 className="group p-4 rounded-xl bg-white dark:bg-[#162621] border border-gray-200/80 dark:border-gray-800 hover:border-[#0F382C]/40 dark:hover:border-[#C5A059]/40 transition-all cursor-pointer shadow-sm hover:shadow-card"

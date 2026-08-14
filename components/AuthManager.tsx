@@ -4,11 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Mail, Lock, User, LogIn, UserPlus, LogOut, Settings, Heart, BookOpen, ShieldCheck, Loader2, KeyRound } from 'lucide-react';
 import { login, register, logout, getSession } from '@/app/actions/auth';
 
-interface AuthManagerProps {
-  onNavigate: (tab: string) => void;
-}
-
-export const AuthManager: React.FC<AuthManagerProps> = ({ onNavigate }) => {
+export const AuthManager: React.FC = () => {
   const [view, setView] = useState<'login' | 'register' | 'profile'>('login');
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);

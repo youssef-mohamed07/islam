@@ -1,17 +1,22 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Play, Bookmark, Share2, Copy, Check, Type, Layout, AlignJustify, X, BookOpen, ChevronDown } from 'lucide-react';
 import { MOCK_SURAHS, MOCK_AYAH_SAMPLE } from './MockData';
 import { BottomSheet } from './BottomSheet';
+import { useShell } from './AudioContext';
 
 interface QuranStudioProps {
-  onPlayAudio: (surahId: number, surahName: string, ayahNumber: number, playMode?: 'verse' | 'surah', totalVerses?: number) => void;
+  initialSurahId?: number;
+  initialAyahId?: number;
 }
 
-export const QuranStudio: React.FC<QuranStudioProps> = ({ onPlayAudio }) => {
+export const QuranStudio: React.FC<QuranStudioProps> = ({ initialSurahId, initialAyahId }) => {
+  const router = useRouter();
+  const { playAudio } = useShell();
   const [surahsList, setSurahsList] = useState(MOCK_SURAHS);
-  const [selectedSurah, setSelectedSurah] = useState(MOCK_SURAHS[0]);
+  const [selectedSurah, setSelectedSurah] = useState(MOCK_SURAHS.find(s => s.id === initialSurahId) || MOCK_SURAHS[0]);
   const [readingMode, setReadingMode] = useState<'mushaf' | 'verseByVerse'>('mushaf');
   const [selectedTafsir, setSelectedTafsir] = useState<'none' | 'saadi' | 'ibnKathir'>('none');
   const [selectedQiraah, setSelectedQiraah] = useState('hafs');
@@ -36,6 +41,15 @@ export const QuranStudio: React.FC<QuranStudioProps> = ({ onPlayAudio }) => {
   // Mobile surah picker sheet
   const [isSurahSheetOpen, setIsSurahSheetOpen] = useState(false);
 
+  // Highlighted ayah from a deep link (/quran/:surahId/:ayahId)
+  const [highlightAyah, setHighlightAyah] = useState<number | null>(null);
+
+  // Select a surah locally and sync the URL
+  const selectSurah = (surah: any) => {
+    setSelectedSurah(surah);
+    router.push(`/quran/${surah.id}`);
+  };
+
   // Fetch live Surahs on mount
   useEffect(() => {
     fetch('/api/quran/surahs')
@@ -43,11 +57,33 @@ export const QuranStudio: React.FC<QuranStudioProps> = ({ onPlayAudio }) => {
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
           setSurahsList(data);
-          setSelectedSurah(data[0]);
+          if (!initialSurahId) setSelectedSurah(data[0]);
         }
       })
       .catch((err) => console.warn('Using default surahs list:', err));
   }, []);
+
+  // Keep selection in sync with the surahId from the URL
+  useEffect(() => {
+    if (!initialSurahId) return;
+    if (selectedSurah && selectedSurah.id === initialSurahId) return;
+    const target = surahsList.find((s) => s.id === initialSurahId) || MOCK_SURAHS.find((s) => s.id === initialSurahId);
+    if (target) setSelectedSurah(target);
+  }, [initialSurahId, surahsList]);
+
+  // Scroll to and highlight a deep-linked ayah once its verses load
+  useEffect(() => {
+    if (!initialAyahId || isLoadingVerses || !selectedSurah) return;
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`ayah-${selectedSurah.id}-${initialAyahId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setHighlightAyah(initialAyahId);
+        setTimeout(() => setHighlightAyah(null), 2500);
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [initialAyahId, isLoadingVerses, selectedSurah]);
 
   // Client-side Caching Ref
   const versesCacheRef = useRef<Map<number, any[]>>(new Map());
@@ -364,7 +400,7 @@ export const QuranStudio: React.FC<QuranStudioProps> = ({ onPlayAudio }) => {
               return (
                 <button
                   key={surah.id}
-                  onClick={() => setSelectedSurah(surah)}
+                  onClick={() => selectSurah(surah)}
                   className={`w-full text-right p-3 rounded-xl transition-all flex items-center justify-between ${
                     isSelected
                       ? 'bg-[#0F382C] text-white font-bold shadow-md'
@@ -418,7 +454,7 @@ export const QuranStudio: React.FC<QuranStudioProps> = ({ onPlayAudio }) => {
 
             <div className="mt-6 flex justify-center relative z-10">
                <button 
-                 onClick={() => onPlayAudio(selectedSurah.id, selectedSurah.nameArabic, 1, 'surah', selectedSurah.versesCount)}
+                 onClick={() => playAudio(selectedSurah.id, selectedSurah.nameArabic, 1, 'surah', selectedSurah.versesCount)}
                  className="flex items-center space-x-2 space-x-reverse bg-[#C5A059] hover:bg-[#B28E46] text-[#0F382C] px-5 py-2 rounded-full text-xs font-bold transition-all shadow-md active:scale-95"
                >
                  <Play className="w-4 h-4 fill-current" />
@@ -444,7 +480,8 @@ export const QuranStudio: React.FC<QuranStudioProps> = ({ onPlayAudio }) => {
                       return (
                         <span 
                           key={verse.id} 
-                          className="inline relative hover:bg-[#C5A059]/10 transition-colors rounded px-1 cursor-pointer"
+                          id={`ayah-${selectedSurah.id}-${ayahNum}`}
+                          className={`inline relative hover:bg-[#C5A059]/10 transition-colors rounded px-1 cursor-pointer ${highlightAyah === Number(ayahNum) ? 'bg-[#C5A059]/30 ring-2 ring-[#C5A059]' : ''}`}
                           onClick={() => setPopoverAyahKey(verse.verse_key)}
                           title="اضغط لعرض التفسير والتشغيل"
                         >
@@ -467,7 +504,8 @@ export const QuranStudio: React.FC<QuranStudioProps> = ({ onPlayAudio }) => {
                     return (
                       <div
                         key={verse.id}
-                        className="bg-white dark:bg-[#162621] p-6 rounded-2xl shadow-soft border border-gray-200/80 dark:border-gray-800 transition-all hover:border-[#0F382C]/30"
+                        id={`ayah-${selectedSurah.id}-${ayahNum}`}
+                        className={`bg-white dark:bg-[#162621] p-6 rounded-2xl shadow-soft border transition-all hover:border-[#0F382C]/30 ${highlightAyah === ayahNum ? 'border-[#C5A059] ring-2 ring-[#C5A059]' : 'border-gray-200/80 dark:border-gray-800'}`}
                       >
                         {/* Verse Actions Header */}
                         <div className="flex items-center justify-between pb-4 mb-4 border-b border-gray-100 dark:border-gray-800 text-xs text-gray-500">
@@ -477,7 +515,7 @@ export const QuranStudio: React.FC<QuranStudioProps> = ({ onPlayAudio }) => {
                           
                           <div className="flex items-center space-x-3 space-x-reverse">
                             <button
-                              onClick={() => onPlayAudio(selectedSurah.id, selectedSurah.nameArabic, ayahNum)}
+                              onClick={() => playAudio(selectedSurah.id, selectedSurah.nameArabic, ayahNum)}
                               className="flex items-center space-x-1 space-x-reverse text-[#0F382C] dark:text-[#C5A059] hover:bg-emerald-50 dark:hover:bg-emerald-950 px-3 py-1.5 rounded-lg transition-colors font-bold"
                             >
                               <Play className="w-4 h-4 fill-current ml-1" />
@@ -565,7 +603,7 @@ export const QuranStudio: React.FC<QuranStudioProps> = ({ onPlayAudio }) => {
                 <button
                   onClick={() => {
                     const ayahNum = parseInt(popoverAyahKey.split(':')[1]);
-                    onPlayAudio(selectedSurah.id, selectedSurah.nameArabic, ayahNum);
+                    playAudio(selectedSurah.id, selectedSurah.nameArabic, ayahNum);
                   }}
                   className="text-emerald-300 hover:text-[#C5A059] p-2 rounded-xl hover:bg-white/10 transition-colors"
                   title="تشغيل الآية"
@@ -648,7 +686,7 @@ export const QuranStudio: React.FC<QuranStudioProps> = ({ onPlayAudio }) => {
         }))}
         onSelect={(id) => {
           const surah = surahsList.find((s) => String(s.id) === id);
-          if (surah) setSelectedSurah(surah);
+          if (surah) selectSurah(surah);
         }}
       />
 

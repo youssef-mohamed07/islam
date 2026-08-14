@@ -44,11 +44,7 @@ export default function ZakatCalculator() {
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] dark:bg-[#0D1412] pb-24">
-      <Header 
-        activeTab="zakat"
-        setActiveTab={() => window.location.href = '/'}
-        openSearchModal={() => {}}
-      />
+      <Header />
       
       <main className="max-w-4xl mx-auto px-4 pt-24">
         <div className="text-center mb-10">

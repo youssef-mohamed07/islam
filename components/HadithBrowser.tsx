@@ -1,35 +1,52 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { ShieldCheck, Search, Bookmark, Copy, Check, Loader2 } from 'lucide-react';
+import { HADITH_COLLECTIONS } from './hadithCollections';
 
-export const HadithBrowser: React.FC = () => {
-  const [selectedCollection, setSelectedCollection] = useState('bukhari');
+interface HadithBrowserProps {
+  initialCollection?: string;
+  initialSection?: string;
+}
+
+export const HadithBrowser: React.FC<HadithBrowserProps> = ({ initialCollection, initialSection }) => {
+  const router = useRouter();
+  const validCollection = HADITH_COLLECTIONS.some(c => c.id === initialCollection) ? initialCollection! : 'bukhari';
+  const [selectedCollection, setSelectedCollection] = useState(validCollection);
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedId, setCopiedId] = useState<number | null>(null);
   
   const [sections, setSections] = useState<Record<string, string>>({});
-  const [selectedSection, setSelectedSection] = useState<string>('1');
+  const [selectedSection, setSelectedSection] = useState<string>(initialSection || '1');
   
   const [hadiths, setHadiths] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const collections = [
-    { id: 'bukhari', name: 'صحيح البخاري', author: 'الإمام البخاري', total: 7563 },
-    { id: 'muslim', name: 'صحيح مسلم', author: 'الإمام مسلم', total: 7500 },
-    { id: 'abudawud', name: 'سنن أبي داود', author: 'الإمام أبو داود', total: 5274 },
-    { id: 'tirmidhi', name: 'جامع الترمذي', author: 'الإمام الترمذي', total: 3956 },
-    { id: 'nasai', name: 'سنن النسائي', author: 'الإمام النسائي', total: 5758 },
-    { id: 'ibnmajah', name: 'سنن ابن ماجه', author: 'الإمام ابن ماجه', total: 4341 },
-    { id: 'malik', name: 'موطأ مالك', author: 'الإمام مالك بن أنس', total: 1858 },
-    { id: 'ahmad', name: 'مسند أحمد', author: 'الإمام أحمد بن حنبل', total: 27647 }
-  ];
+  const collections = HADITH_COLLECTIONS;
+
+  // Select a collection locally and sync the URL
+  const selectCollection = (id: string) => {
+    setSelectedCollection(id);
+    router.push(`/hadith/${id}`);
+  };
+
+  // Select a section locally and sync the URL
+  const selectSection = (section: string) => {
+    setSelectedSection(section);
+    router.push(`/hadith/${selectedCollection}/${section}`);
+  };
+
+  // Section coming from the URL applies only to the collection it was loaded for
+  const pendingSectionRef = useRef<string | null>(initialSection || null);
 
   useEffect(() => {
     let isMounted = true;
     setSections({});
-    setSelectedSection('1');
+    const pendingSection = pendingSectionRef.current;
+    pendingSectionRef.current = null;
+    if (!pendingSection) setSelectedSection('1');
     
     // Fetch sections for the collection
     fetch(`/api/hadith/sections/${selectedCollection}`)
@@ -37,15 +54,29 @@ export const HadithBrowser: React.FC = () => {
       .then(data => {
         if (isMounted && data && Object.keys(data).length > 0) {
           setSections(data);
-          // Set first valid section
-          const firstSection = Object.keys(data).find(k => data[k] !== '') || '1';
-          setSelectedSection(firstSection);
+          // Prefer the deep-linked section when it exists, else first valid one
+          if (pendingSection && data[pendingSection] !== undefined && data[pendingSection] !== '') {
+            setSelectedSection(pendingSection);
+          } else {
+            const firstSection = Object.keys(data).find(k => data[k] !== '') || '1';
+            setSelectedSection(firstSection);
+          }
         }
       })
       .catch(err => console.error('Failed to load sections', err));
       
     return () => { isMounted = false; };
   }, [selectedCollection]);
+
+  // Keep selection in sync when the URL changes while the component is mounted
+  useEffect(() => {
+    if (initialCollection && HADITH_COLLECTIONS.some(c => c.id === initialCollection) && initialCollection !== selectedCollection) {
+      pendingSectionRef.current = initialSection || null;
+      setSelectedCollection(initialCollection);
+    } else if (initialSection && initialSection !== selectedSection) {
+      setSelectedSection(initialSection);
+    }
+  }, [initialCollection, initialSection]);
 
   useEffect(() => {
     if (!selectedSection) return;
@@ -128,7 +159,7 @@ export const HadithBrowser: React.FC = () => {
               return (
                 <button
                   key={col.id}
-                  onClick={() => setSelectedCollection(col.id)}
+                  onClick={() => selectCollection(col.id)}
                   className={`min-w-[120px] lg:min-w-0 lg:w-full text-right p-2.5 sm:p-3 rounded-xl transition-all flex flex-col lg:flex-row items-start lg:items-center justify-between snap-start shrink-0 ${
                     isSelected
                       ? 'bg-[#0F382C] text-white font-bold shadow-md'
@@ -158,7 +189,7 @@ export const HadithBrowser: React.FC = () => {
               <label className="hidden sm:block text-xs font-bold text-gray-500 mb-1">كتاب / باب</label>
               <select
                 value={selectedSection}
-                onChange={(e) => setSelectedSection(e.target.value)}
+                onChange={(e) => selectSection(e.target.value)}
                 className="w-full bg-gray-50 dark:bg-[#0D1412] border border-gray-200 dark:border-gray-700 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-[#0F382C] dark:text-white focus:outline-none focus:ring-2 focus:ring-[#C5A059]"
               >
                 {Object.keys(sections).map(key => {

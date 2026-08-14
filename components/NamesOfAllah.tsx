@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { namesOfAllah } from '@/lib/namesOfAllahData';
 import { Search } from 'lucide-react';

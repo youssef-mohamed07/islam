@@ -1,13 +1,19 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Sun, Moon, Clock, Check, RefreshCw, BookOpen, Search, ShieldCheck, ChevronDown } from 'lucide-react';
 import { BottomSheet } from './BottomSheet';
 
-export const Adhkar: React.FC = () => {
+interface AdhkarProps {
+  initialCategory?: string;
+}
+
+export const Adhkar: React.FC<AdhkarProps> = ({ initialCategory }) => {
+  const router = useRouter();
   const [adhkarData, setAdhkarData] = useState<Record<string, { text: string[], footnote: string[] }>>({});
   const [categories, setCategories] = useState<string[]>([]);
-  const [activeCategory, setActiveCategory] = useState<string>('');
+  const [activeCategory, setActiveCategory] = useState<string>(initialCategory || '');
   const [searchTerm, setSearchTerm] = useState('');
 
   // Mobile category picker sheet
@@ -16,6 +22,12 @@ export const Adhkar: React.FC = () => {
   // Initialize counters for the current category
   const [counters, setCounters] = useState<Record<number, number>>({});
 
+  // Select a category locally and sync the URL
+  const selectCategory = (cat: string) => {
+    setActiveCategory(cat);
+    router.push(`/adhkar/${encodeURIComponent(cat)}`);
+  };
+
   useEffect(() => {
     fetch('/data/hisn_almuslim.json')
       .then(res => res.json())
@@ -23,7 +35,7 @@ export const Adhkar: React.FC = () => {
         setAdhkarData(data);
         const cats = Object.keys(data);
         setCategories(cats);
-        if (cats.length > 0) {
+        if (cats.length > 0 && !activeCategory) {
           // Default to morning/evening if exists
           const defaultCat = cats.find(c => c.includes('الصباح')) || cats[0];
           setActiveCategory(defaultCat);
@@ -31,6 +43,17 @@ export const Adhkar: React.FC = () => {
       })
       .catch(err => console.error('Failed to load adhkar', err));
   }, []);
+
+  // Keep selection in sync with the category from the URL
+  useEffect(() => {
+    if (!initialCategory || categories.length === 0) return;
+    if (categories.includes(initialCategory)) {
+      setActiveCategory(initialCategory);
+    } else {
+      // Unknown category in URL → fall back to morning adhkar or first one
+      setActiveCategory(categories.find(c => c.includes('الصباح')) || categories[0]);
+    }
+  }, [initialCategory, categories]);
 
   // Reset counters when category changes
   useEffect(() => {
@@ -97,7 +120,7 @@ export const Adhkar: React.FC = () => {
             {filteredCategories.map((cat) => (
               <button
                 key={cat}
-                onClick={() => setActiveCategory(cat)}
+                onClick={() => selectCategory(cat)}
                 className={`w-full text-right p-3 rounded-xl transition-all text-sm ${
                   activeCategory === cat
                     ? 'bg-[#0F382C] text-white font-bold shadow-md'
@@ -214,7 +237,7 @@ export const Adhkar: React.FC = () => {
         searchPlaceholder="ابحث عن باب..."
         selectedId={activeCategory}
         items={categories.map((cat) => ({ id: cat, label: cat }))}
-        onSelect={(id) => setActiveCategory(id)}
+        onSelect={(id) => selectCategory(id)}
       />
     </div>
   );
