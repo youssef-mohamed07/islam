@@ -40,7 +40,7 @@ export const Header: React.FC = () => {
     { id: 'names', label: 'أسماء الله', href: '/names' },
     { id: 'scholars', label: t.nav.scholars, href: '/scholars' },
     { id: 'tools', label: t.nav.tools, href: '/tools' },
-    { id: 'zakat', label: 'حاسبة الزكاة', href: '/zakat' },
+    { id: 'zakat', label: 'الزكاة والصدقة', href: '/zakat' },
   ];
 
   const isActive = (href: string) =>

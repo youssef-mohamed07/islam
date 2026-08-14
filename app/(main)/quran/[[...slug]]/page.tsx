@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { MOCK_SURAHS } from '@/components/MockData';
 import { QuranStudio } from '@/components/QuranStudio';
+import { pageMetadata } from '@/lib/seo';
 
 interface QuranPageProps {
   params: Promise<{ slug?: string[] }>;
@@ -18,21 +19,23 @@ function parseIds(slug?: string[]) {
 export async function generateMetadata({ params }: QuranPageProps): Promise<Metadata> {
   const { surahId, ayahId } = parseIds((await params).slug);
   if (!surahId) {
-    return {
+    return pageMetadata({
       title: 'القرآن الكريم | خير سند',
       description: 'تصفح سور القرآن الكريم كاملة مع التلاوة والتفاسير والقراءات المتواترة.',
-    };
+      path: '/quran',
+    });
   }
   const surah = MOCK_SURAHS.find((s) => s.id === surahId);
   const name = surah ? surah.nameArabic : `رقم ${surahId}`;
-  return {
+  return pageMetadata({
     title: ayahId
       ? `سورة ${name} - الآية ${ayahId} | خير سند`
       : `سورة ${name} | خير سند`,
     description: ayahId
       ? `اقرأ الآية ${ayahId} من سورة ${name} مع التفسير والتلاوة.`
       : `اقرأ سورة ${name} كاملة مع التفسير والتلاوة والقراءات.`,
-  };
+    path: `/quran/${surahId}${ayahId ? `/${ayahId}` : ''}`,
+  });
 }
 
 export default async function QuranPage({ params }: QuranPageProps) {
