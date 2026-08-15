@@ -55,12 +55,26 @@ export const Adhkar: React.FC<AdhkarProps> = ({ initialCategory }) => {
     }
   }, [initialCategory, categories]);
 
+  // Helper to parse count from text
+  const extractCount = (text: string, footnote: string = ''): number => {
+    const combined = (text + ' ' + footnote).toLowerCase();
+    if (combined.includes('مائة مرة') || combined.includes('مئة مرة')) return 100;
+    if (combined.includes('ثلاثا وثلاثين') || combined.includes('ثلاثاً وثلاثين') || combined.includes('ثلاثا و ثلاثين')) return 33;
+    if (combined.includes('عشر مرات')) return 10;
+    if (combined.includes('سبع مرات')) return 7;
+    if (combined.includes('أربع مرات')) return 4;
+    if (combined.includes('ثلاث مرات') || combined.includes('ثلاثا ') || combined.includes('ثلاثاً ')) return 3;
+    if (combined.includes('مرتين')) return 2;
+    return 1; // Default
+  };
+
   // Reset counters when category changes
   useEffect(() => {
     if (activeCategory && adhkarData[activeCategory]) {
       const initialCounters: Record<number, number> = {};
-      adhkarData[activeCategory].text.forEach((_, index) => {
-        initialCounters[index] = 1; // Default count is 1 for Hisn al Muslim unless parsed differently
+      adhkarData[activeCategory].text.forEach((text, index) => {
+        const footnote = adhkarData[activeCategory].footnote[index] || '';
+        initialCounters[index] = extractCount(text, footnote);
       });
       setCounters(initialCounters);
     }
